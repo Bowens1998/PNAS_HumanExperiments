@@ -406,7 +406,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const waitMsg = document.getElementById('waitMsg');
           if (waitMsg) waitMsg.style.display = 'none';
           const returnBtn = document.getElementById('returnBtn');
-          if (returnBtn) returnBtn.style.display = 'inline-block';
+          if (returnBtn) returnBtn.setAttribute('style', 'text-decoration:none; display:inline-block !important; margin-top:16px;');
         } catch (err) {
           console.error(err);
           if (saveStatus) {

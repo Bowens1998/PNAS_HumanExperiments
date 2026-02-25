@@ -13,10 +13,10 @@ window.APP_CONFIG = {
         "drain_collision_penalty": 2.0
     },
     "blocks": 1,
-    "trials_per_block": 2,
+    "trials_per_block": 10,
     "manipulations": {
         "volatility": [
-            "low",
+            "high",
             "high"
         ],
         "urgency": [
@@ -24,12 +24,12 @@ window.APP_CONFIG = {
             "on"
         ],
         "sensor_noise": [
-            "low",
+            "high",
             "high"
         ],
         "map_density": [
             "sparse",
-            "dense"
+            "sparse"
         ]
     },
     "payoffs": {
