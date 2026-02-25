@@ -475,6 +475,8 @@
             if (saveStatus) saveStatus.style.color = "var(--success)";
             const waitMsg = document.getElementById('waitMsg');
             if (waitMsg) waitMsg.style.display = 'none';
+            const returnBtn = document.getElementById('returnBtn');
+            if (returnBtn) returnBtn.style.display = 'inline-block';
           } catch (err) {
             console.error(err);
             if (saveStatus) saveStatus.innerText = "Error saving data. Backup saved locally.";
