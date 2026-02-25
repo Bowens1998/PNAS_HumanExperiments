@@ -3,92 +3,228 @@
 
 <head>
     <meta charset="utf-8">
-    <title>Decision-Making Experiments</title>
+    <title>Stanford Decision-Making Study</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --ink: #0f172a;
-            --muted: #64748b;
-            --line: #e5e7eb;
-            --bg: #f8fafc;
-            --pri: #0ea5e9;
-            --pri-hover: #0284c7;
+            --primary: #4F46E5;
+            --primary-hover: #4338CA;
+            --secondary: #10B981;
+            --secondary-hover: #059669;
+            --background: #F3F4F6;
+            --surface: #FFFFFF;
+            --text-main: #111827;
+            --text-muted: #6B7280;
+            --border: #E5E7EB;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --radius-md: 12px;
+            --radius-lg: 16px;
         }
 
         body {
-            font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
             margin: 0;
-            color: var(--ink);
-            background: var(--bg);
+            color: var(--text-main);
+            background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-height: 100vh;
+            justify-content: center;
             padding: 40px 20px;
             box-sizing: border-box;
         }
 
         .container {
-            max-width: 600px;
+            max-width: 650px;
             width: 100%;
-            background: white;
-            border: 1px solid var(--line);
-            border-radius: 16px;
-            padding: 32px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 48px;
+            box-shadow: var(--shadow-lg);
             text-align: center;
+            animation: fadeIn 0.6s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header-icon {
+            width: 64px;
+            height: 64px;
+            background: #EEF2FF;
+            color: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            font-size: 32px;
         }
 
         h1 {
-            margin-top: 0;
-            margin-bottom: 8px;
+            margin: 0 0 16px 0;
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            color: var(--text-main);
         }
 
-        p {
-            color: var(--muted);
-            margin-bottom: 32px;
-            line-height: 1.5;
+        p.description {
+            color: var(--text-muted);
+            margin: 0 0 40px 0;
+            font-size: 16px;
+            line-height: 1.6;
         }
 
-        .buttons {
+        .task-grid {
+            display: grid;
+            gap: 20px;
+            grid-template-columns: 1fr;
+        }
+
+        .task-card {
             display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        a.button {
-            display: block;
+            align-items: center;
+            justify-content: space-between;
             text-decoration: none;
-            background: white;
-            color: var(--pri);
-            border: 2px solid var(--pri);
-            padding: 16px;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 18px;
-            transition: all 0.2s ease;
+            background: var(--surface);
+            border: 2px solid var(--border);
+            padding: 20px 24px;
+            border-radius: var(--radius-md);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
         }
 
-        a.button:hover {
-            background: var(--pri);
-            color: white;
+        .task-card:hover {
+            border-color: var(--primary);
+            box-shadow: var(--shadow-md);
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.2);
+        }
+
+        .task-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--primary);
+            transform: scaleY(0);
+            transition: transform 0.2s ease;
+            transform-origin: bottom;
+        }
+
+        .task-card:hover::before {
+            transform: scaleY(1);
+        }
+
+        .task-info {
+            text-align: left;
+        }
+
+        .task-title {
+            display: block;
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 6px;
+        }
+
+        .task-desc {
+            display: block;
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .task-arrow {
+            color: var(--primary);
+            font-size: 24px;
+            font-weight: 700;
+            transition: transform 0.2s ease;
+        }
+
+        .task-card:hover .task-arrow {
+            transform: translateX(4px);
+        }
+
+        .footer {
+            margin-top: 32px;
+            font-size: 13px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .footer svg {
+            width: 16px;
+            height: 16px;
         }
     </style>
 </head>
 
 <body>
     <div class="container">
-        <h1>Welcome to the Study</h1>
-        <p>Please select the experiment you have been assigned to below. You will be guided through a series of trials.
-            Ensure that you submit your data at the end.</p>
+        <div class="header-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+            </svg>
+        </div>
+        <h1>Decision-Making Study</h1>
+        <p class="description">Thank you for participating! Please select the specific task you have been assigned to
+            from the options below. You will be guided through detailed instructions before beginning.</p>
 
-        <div class="buttons">
-            <!-- These links point to the subfolders relative to this file -->
-            <a href="Experiment_DSB/index.html" class="button">Drone Navigation (DSB)</a>
-            <a href="Experiment_FIP/index.html" class="button">Financial Investment (FIP)</a>
-            <a href="Experiment_TPB/index.html" class="button">Emergency Triage (TPB)</a>
+        <div class="task-grid">
+            <a href="Experiment_DSB/index.html" class="task-card">
+                <div class="task-info">
+                    <span class="task-title">Drone Navigation Task</span>
+                    <span class="task-desc">Navigate a drone through varying environments safely.</span>
+                </div>
+                <div class="task-arrow">→</div>
+            </a>
+
+            <a href="Experiment_FIP/index.html" class="task-card">
+                <div class="task-info">
+                    <span class="task-title">Financial Investment Task</span>
+                    <span class="task-desc">Make strategic portfolio allocations over time.</span>
+                </div>
+                <div class="task-arrow">→</div>
+            </a>
+
+            <a href="Experiment_TPB/index.html" class="task-card">
+                <div class="task-info">
+                    <span class="task-title">Emergency Triage Task</span>
+                    <span class="task-desc">Prioritize safety and efficiency in emergency scenarios.</span>
+                </div>
+                <div class="task-arrow">→</div>
+            </a>
+        </div>
+
+        <div class="footer">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            This data will be recorded completely anonymously.
         </div>
     </div>
 </body>

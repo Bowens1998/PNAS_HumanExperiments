@@ -2,7 +2,7 @@
 // Includes Headless Parallel Execution support
 
 (async function () {
-  const cfg = await (await fetch('./js/config.json', { cache: 'no-store' })).json();
+  const cfg = window.APP_CONFIG;
   const R = (id) => document.getElementById(id);
   const log = (msg) => { R('log').textContent = `[${new Date().toLocaleTimeString()}] ${msg}\n` + R('log').textContent; };
   const choice = (arr) => arr[Math.floor(Math.random() * arr.length)];
@@ -154,8 +154,8 @@
   const esiSelect = document.getElementById('esiSelect');
   const confirmESI = document.getElementById('confirmESI');
   const ctxReqHint = document.getElementById('ctxReqHint');
-  const openModal = () => { modalBg.style.display = 'flex'; };
-  const closeModal = () => { modalBg.style.display = 'none'; };
+  const openModal = () => { modalBg.classList.add('active'); };
+  const closeModal = () => { modalBg.classList.remove('active'); };
 
   // Build BF diagnosis options
   const dxList = R('dxList');
@@ -402,50 +402,48 @@
     const isLastTrial = (runLog.trials.length >= target);
 
     if (!isLastTrial) {
-      alert("successfully submitted");
       newTrial();
     } else {
-      btn.dl.style.display = 'inline-block';
-      btn.dl.disabled = false;
-      const subAll = document.getElementById('submitAllBtn');
-      if (subAll) {
-        subAll.style.display = 'inline-block';
-        subAll.disabled = false;
-      }
       btn.next.disabled = true;
       btn.final.disabled = true;
-      btn.restart.disabled = false;
+      btn.restart.disabled = true;
       R('status').innerText = `All ${target} trials complete! Thank you.`;
+
+      // Show Task Complete Modal
+      const completeModal = document.getElementById('completeModal');
+      const saveStatus = document.getElementById('saveStatus');
+      if (completeModal) completeModal.classList.add('active');
+
+      // Auto-submit to Webhook
+      try {
+        const payload = {
+          experimentId: "TPB",
+          timestamp: new Date().toLocaleString() + ' ' + Intl.DateTimeFormat().resolvedOptions().timeZone,
+          data: JSON.stringify(runLog)
+        };
+        await fetch(WEBHOOK_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload)
+        });
+        if (saveStatus) {
+          saveStatus.innerText = "Data saved successfully! You may now return.";
+          saveStatus.style.color = "var(--success)";
+        }
+      } catch (err) {
+        console.error(err);
+        if (saveStatus) {
+          saveStatus.innerText = "Error saving data. Backup saved locally.";
+          saveStatus.style.color = "var(--danger)";
+        }
+        btn.dl.style.display = 'inline-block';
+        btn.dl.disabled = false;
+      }
     }
   };
 
-  const submitAllBtn = document.getElementById('submitAllBtn');
-  if (submitAllBtn) {
-    submitAllBtn.onclick = async () => {
-      const url = "https://script.google.com/macros/s/AKfycbzyZHP0KBEsq0hnyFrE8sWIVuZFFHIbhvngklXmiAojQa_y6ZYbiL9bjZQmGJXV2yXK/exec";
-      if (url) {
-        try {
-          const payload = {
-            experimentId: "TPB",
-            timestamp: new Date().toISOString(),
-            data: JSON.stringify(runLog)
-          };
-          await fetch(url, {
-            method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-          });
-          alert("All trials are successfully submitted");
-        } catch (err) {
-          console.error(err);
-          alert("Error submitting data. Data saved locally in session. Please download JSON later if issue persists.");
-        }
-      } else {
-        alert("All trials are successfully submitted");
-      }
-    };
-  }
+  // Note: submitAllBtn logic removed inside html and js as auto-submit handles payload delivery.
 
   function downloadRun() {
     const blob = new Blob([JSON.stringify(runLog || {}, null, 2)], { type: 'application/json' });

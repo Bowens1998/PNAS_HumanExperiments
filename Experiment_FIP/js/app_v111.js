@@ -35,14 +35,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   (async function boot() {
     try {
-      let cfg;
-      try {
-        const res = await fetch('./js/config.json', { cache: 'no-store' });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        cfg = await res.json();
-      } catch (e) {
-        cfg = FALLBACK;
-        showError(`config.json load failed (${e.message}). Using built-in defaults.`);
+      let cfg = typeof window.APP_CONFIG !== 'undefined' ? window.APP_CONFIG : FALLBACK;
+      if (!window.APP_CONFIG) {
+        showError(`config.js load failed or not injected. Using built-in defaults.`);
       }
       await appMain(cfg);
       status.textContent = 'Ready. Adjust sliders or start.';
@@ -150,27 +145,51 @@ document.addEventListener('DOMContentLoaded', () => {
     let mode = 'human';
 
     function drawSparkPct(canvas, arrPct, ticksEl, color) {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+
       const ctx = canvas.getContext('2d');
-      const W = canvas.width, H = canvas.height;
+      ctx.scale(dpr, dpr);
+
+      const W = rect.width, H = rect.height;
       ctx.clearRect(0, 0, W, H);
       const n = arrPct.length;
       const min = Math.min(...arrPct), max = Math.max(...arrPct);
-      const x = (i) => i * (W - 10) / (n - 1) + 5;
-      const y = (v) => H - 18 - (v - min) / (max - min + 1e-9) * (H - 28);
-      ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 1;
+
+      const padX = 20, padY = 32;
+      const x = (i) => padX + i * (W - padX * 2) / (n - 1);
+      const y = (v) => H - padY - (v - min) / (max - min + 1e-9) * (H - padY * 2);
+
+      ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1.5;
       const y0 = y(0);
-      ctx.beginPath(); ctx.moveTo(5, y0); ctx.lineTo(W - 5, y0); ctx.stroke();
-      ctx.strokeStyle = color || '#0ea5e9'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(padX, y0); ctx.lineTo(W - padX, y0); ctx.stroke();
+
+      ctx.strokeStyle = color || '#0ea5e9'; ctx.lineWidth = 3;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
       ctx.beginPath();
-      for (let i = 0; i < n; i++) { const xx = x(i), yy = y(arrPct[i]); if (i === 0) ctx.moveTo(xx, yy); else ctx.lineTo(xx, yy); }
+      for (let i = 0; i < n; i++) {
+        const xx = x(i), yy = y(arrPct[i]);
+        if (i === 0) ctx.moveTo(xx, yy); else ctx.lineTo(xx, yy);
+      }
       ctx.stroke();
-      ctx.fillStyle = '#64748b'; ctx.font = '11px system-ui, -apple-system, sans-serif';
-      ctx.textAlign = 'left'; ctx.fillText('t=0', 6, H - 4);
-      ctx.textAlign = 'right'; ctx.fillText(`t=${n - 1}`, W - 6, H - 4);
-      const minStr = `${min.toFixed(1)}%`; const maxStr = `${max.toFixed(1)}%`; const zeroStr = '0%';
-      ticksEl.innerHTML = `<div style="position:absolute; left:0; top:0; font-size:11px; color:#64748b;">${maxStr}</div>
-                           <div style="position:absolute; left:0; top:${(H - 18) / 2 - 6}px; font-size:11px; color:#64748b;">${zeroStr}</div>
-                           <div style="position:absolute; left:0; bottom:0; font-size:11px; color:#64748b;">${minStr}</div>`;
+
+      ctx.fillStyle = '#64748b'; ctx.font = '500 12px system-ui, -apple-system, sans-serif';
+      ctx.textAlign = 'left'; ctx.fillText('Start', padX, H - 8);
+      ctx.textAlign = 'right'; ctx.fillText('End', W - padX, H - 8);
+
+      const minStr = `${min.toFixed(1)}%`; const maxStr = `${max.toFixed(1)}%`; const zeroStr = '0.0%';
+      const ls = "position:absolute; left:12px; font-size:13px; font-weight:700; color:#334155; background: rgba(255,255,255,0.9); padding:2px 6px; border-radius:4px; pointer-events:none; transform: translateY(-50%); box-shadow: 0 1px 3px rgba(0,0,0,0.1);";
+
+      let html = `<div style="${ls} top:${y(max)}px;">${maxStr}</div>`;
+      if (Math.abs(y0 - y(max)) > 26 && Math.abs(y0 - y(min)) > 26) {
+        html += `<div style="${ls} top:${y0}px; color:#94a3b8; font-weight:600;">${zeroStr}</div>`;
+      }
+      html += `<div style="${ls} top:${y(min)}px;">${minStr}</div>`;
+
+      ticksEl.innerHTML = html;
     }
 
     function runtime() {
@@ -247,27 +266,66 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    function normalizeTriple(active, vA, vB, vC) {
-      const R = 100 - vA;
-      const S = vB + vC;
-      let b, c;
-      if (S <= 0) { b = R / 2; c = R / 2; } else { b = R * (vB / S); c = R * (vC / S); }
-      return [Math.round(vA), Math.round(b), Math.round(c)];
+    const locked = { L: false, M: false, H: false };
+
+    function toggleLock(key) {
+      locked[key] = !locked[key];
+      const btn = document.getElementById('lock' + key);
+      btn.textContent = locked[key] ? '🔒' : '🔓';
+      btn.style.opacity = locked[key] ? '1' : '';
+
+      const lc = (locked.L ? 1 : 0) + (locked.M ? 1 : 0) + (locked.H ? 1 : 0);
+      wL.disabled = locked.L || lc >= 2;
+      wM.disabled = locked.M || lc >= 2;
+      wH.disabled = locked.H || lc >= 2;
+    }
+
+    function handleAllocInput(activeKey) {
+      const inputs = { L: wL, M: wM, H: wH };
+      const vals = { L: Number(wL.value), M: Number(wM.value), H: Number(wH.value) };
+
+      let activeVal = vals[activeKey];
+      const others = ['L', 'M', 'H'].filter(k => k !== activeKey);
+      const o1 = others[0], o2 = others[1];
+
+      let fixedSum = 0;
+      if (locked[o1]) fixedSum += vals[o1];
+      if (locked[o2]) fixedSum += vals[o2];
+
+      if (activeVal > 100 - fixedSum) {
+        activeVal = 100 - fixedSum;
+        inputs[activeKey].value = activeVal;
+      }
+
+      const R = 100 - activeVal - fixedSum;
+
+      if (!locked[o1] && !locked[o2]) {
+        const S = vals[o1] + vals[o2];
+        if (S <= 0) {
+          inputs[o1].value = Math.round(R / 2);
+          inputs[o2].value = R - Math.round(R / 2);
+        } else {
+          const v1 = Math.round(R * (vals[o1] / S));
+          inputs[o1].value = v1;
+          inputs[o2].value = R - v1;
+        }
+      } else if (!locked[o1] && locked[o2]) {
+        inputs[o1].value = R;
+      } else if (locked[o1] && !locked[o2]) {
+        inputs[o2].value = R;
+      }
+
+      renderTrial();
     }
 
     function bindAlloc() {
-      wL.addEventListener('input', () => {
-        let [a, b, c] = normalizeTriple('L', Number(wL.value), Number(wM.value), Number(wH.value));
-        wL.value = a; wM.value = b; wH.value = c; renderTrial();
-      });
-      wM.addEventListener('input', () => {
-        let [b, a, c] = normalizeTriple('M', Number(wM.value), Number(wL.value), Number(wH.value));
-        wM.value = b; wL.value = a; wH.value = c; renderTrial();
-      });
-      wH.addEventListener('input', () => {
-        let [c, a, b] = normalizeTriple('H', Number(wH.value), Number(wL.value), Number(wM.value));
-        wH.value = c; wL.value = a; wM.value = b; renderTrial();
-      });
+      wL.addEventListener('input', () => handleAllocInput('L'));
+      wM.addEventListener('input', () => handleAllocInput('M'));
+      wH.addEventListener('input', () => handleAllocInput('H'));
+
+      document.getElementById('lockL').addEventListener('click', () => toggleLock('L'));
+      document.getElementById('lockM').addEventListener('click', () => toggleLock('M'));
+      document.getElementById('lockH').addEventListener('click', () => toggleLock('H'));
     }
     bindAlloc();
 
@@ -285,6 +343,13 @@ document.addEventListener('DOMContentLoaded', () => {
       document.querySelector('input[name="trendM"][value="flat"]').checked = true;
       document.querySelector('input[name="trendH"][value="flat"]').checked = true;
       ctxRisk.value = 50; ctxLabel.textContent = 'reported: 50/100';
+
+      locked.L = false; locked.M = false; locked.H = false;
+      document.getElementById('lockL').textContent = '🔓'; document.getElementById('lockL').style.opacity = '';
+      document.getElementById('lockM').textContent = '🔓'; document.getElementById('lockM').style.opacity = '';
+      document.getElementById('lockH').textContent = '🔓'; document.getElementById('lockH').style.opacity = '';
+      wL.disabled = false; wM.disabled = false; wH.disabled = false;
+
       wL.value = 33; wM.value = 33; wH.value = 34; renderTrial();
 
       // Removed LLM prompt building
@@ -310,18 +375,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const isLastTrial = (trialIdx >= RUN.T_trials);
       if (!isLastTrial) {
-        alert("successfully submitted");
+        // Silently proceed to next trial
         nextTrial();
       } else {
         status.textContent = `All ${RUN.T_trials} trials complete. Thank you.`;
-        dlBtn.style.display = 'inline-block';
-        dlBtn.disabled = false;
-        const subAll = $('submitAllBtn');
-        if (subAll) {
-          subAll.style.display = 'inline-block';
-          subAll.disabled = false;
+        document.getElementById('submitTrial').style.display = 'none';
+
+        // Show Task Complete Modal
+        const completeModal = document.getElementById('completeModal');
+        const saveStatus = document.getElementById('saveStatus');
+        if (completeModal) completeModal.classList.add('active');
+
+        // Auto-submit to Webhook
+        try {
+          const payload = {
+            experimentId: "FIP",
+            timestamp: new Date().toLocaleString() + ' ' + Intl.DateTimeFormat().resolvedOptions().timeZone,
+            data: JSON.stringify(LOG)
+          };
+          await fetch(WEBHOOK_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(payload)
+          });
+          if (saveStatus) {
+            saveStatus.innerText = "Data saved successfully! You may now return.";
+            saveStatus.style.color = "var(--success)";
+          }
+        } catch (err) {
+          console.error(err);
+          if (saveStatus) {
+            saveStatus.innerText = "Error saving data. Backup saved locally.";
+            saveStatus.style.color = "var(--danger)";
+          }
+          dlBtn.style.display = 'inline-block';
+          dlBtn.disabled = false;
         }
-        $('submitTrial').style.display = 'none'; // hide submit trial button when done
       }
     }
 
@@ -339,34 +429,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
       a.download = `invest_task_web_v111_${Date.now()}.json`; a.click();
     };
-
-    const submitAllBtn = $('submitAllBtn');
-    if (submitAllBtn) {
-      submitAllBtn.onclick = async () => {
-        const url = "https://script.google.com/macros/s/AKfycbzyZHP0KBEsq0hnyFrE8sWIVuZFFHIbhvngklXmiAojQa_y6ZYbiL9bjZQmGJXV2yXK/exec";
-        if (url) {
-          try {
-            const payload = {
-              experimentId: "FIP",
-              timestamp: new Date().toISOString(),
-              data: JSON.stringify(LOG)
-            };
-            await fetch(url, {
-              method: "POST",
-              mode: "no-cors",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(payload)
-            });
-            alert("All trials are successfully submitted");
-          } catch (err) {
-            console.error(err);
-            alert("Error submitting data. Data saved locally to session. Download JSON instead.");
-          }
-        } else {
-          alert("All trials are successfully submitted");
-        }
-      };
-    }
 
     // Legacy Submit logic removed
 

@@ -1,362 +1,524 @@
 <!doctype html>
-<html>
+<html lang="en">
 
 <head>
   <meta charset="utf-8">
-  <title>DSB — Hard Mode (v6) + Live Controls</title>
+  <title>Drone Navigation Task</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --primary: #4F46E5;
+      --primary-hover: #4338CA;
+      --success: #10B981;
+      --warning: #F59E0B;
+      --danger: #EF4444;
+      --background: #F3F4F6;
+      --surface: #FFFFFF;
+      --text-main: #111827;
+      --text-muted: #6B7280;
+      --border: #E5E7EB;
+      --wall: #374151;
+      --drone: #FBBF24;
+      --start: #DBEAFE;
+      --goal: #D1FAE5;
+      --radius: 12px;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
     body {
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
       margin: 0;
       padding: 0;
-      background: #fafafa;
+      background: var(--background);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
     }
 
     header {
-      padding: 12px 16px;
-      background: #0f172a;
-      color: white;
+      padding: 16px 24px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
       display: flex;
-      gap: 12px;
+      justify-content: space-between;
       align-items: center;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-main);
     }
 
     main {
-      padding: 16px;
+      padding: 32px 20px;
       max-width: 1100px;
       margin: 0 auto;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #hud-container {
+      background: var(--surface);
+      padding: 16px 24px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      max-width: 600px;
+    }
+
+    #status {
+      font-weight: 500;
+      color: var(--primary);
+      font-size: 16px;
+    }
+
+    #hud {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 500;
+    }
+
+    .battery {
+      width: 200px;
+      height: 16px;
+      background: var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+      display: inline-block;
+      vertical-align: middle;
+      position: relative;
+    }
+
+    .battery>div {
+      height: 100%;
+      background: var(--success);
+      width: 100%;
+      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease;
     }
 
     #grid {
       display: grid;
       gap: 2px;
-      margin: 12px auto;
-      width: max-content;
+      background: var(--border);
+      border: 4px solid var(--surface);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
     }
 
     .cell {
+      background: var(--surface);
       box-sizing: border-box;
-      border: 1px solid #ddd;
-      background: #fff;
+      transition: background-color 0.1s;
+    }
+
+    @keyframes shake {
+      0% {
+        transform: translate(1px, 1px) rotate(0deg);
+      }
+
+      10% {
+        transform: translate(-1px, -2px) rotate(-1deg);
+      }
+
+      20% {
+        transform: translate(-3px, 0px) rotate(1deg);
+      }
+
+      30% {
+        transform: translate(3px, 2px) rotate(0deg);
+      }
+
+      40% {
+        transform: translate(1px, -1px) rotate(1deg);
+      }
+
+      50% {
+        transform: translate(-1px, 2px) rotate(-1deg);
+      }
+
+      60% {
+        transform: translate(-3px, 1px) rotate(0deg);
+      }
+
+      70% {
+        transform: translate(3px, 1px) rotate(-1deg);
+      }
+
+      80% {
+        transform: translate(-1px, -1px) rotate(1deg);
+      }
+
+      90% {
+        transform: translate(1px, 2px) rotate(0deg);
+      }
+
+      100% {
+        transform: translate(1px, -2px) rotate(-1deg);
+      }
+    }
+
+    .shake {
+      animation: shake 0.3s cubic-bezier(.36, .07, .19, .97) both;
+      border-color: var(--danger) !important;
     }
 
     .wall {
-      background: #3f3f46;
+      background: var(--wall);
     }
 
     .start {
-      background: #cce5ff;
+      background: var(--start);
     }
 
     .goal {
-      background: #d4edda;
+      background: var(--goal);
     }
 
     .agent {
-      background: #ffcc00;
-      border: 2px solid #aa8800;
+      background: var(--drone);
+      border: 3px solid #D97706;
+      border-radius: 4px;
+      transform: scale(0.9);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
 
-    #hud {
-      text-align: center;
-      margin-top: 8px;
-      color: #0f172a;
-    }
-
-    #status {
-      text-align: center;
-      color: #64748b;
-    }
-
-    #toolbar {
+    .toolbar {
       display: flex;
-      gap: 8px;
-      justify-content: center;
-      margin: 10px 0;
-      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 24px;
     }
 
     button {
-      padding: 8px 12px;
+      padding: 12px 24px;
       border-radius: 8px;
-      border: 1px solid #cbd5e1;
-      background: #f8fafc;
+      border: none;
+      font-family: inherit;
+      font-weight: 600;
+      font-size: 15px;
       cursor: pointer;
-    }
-
-    #llmPanel {
-      display: none;
-    }
-
-    .row {
-      display: flex;
-      gap: 10px;
-    }
-
-    .col {
-      flex: 1;
-    }
-
-    .card {
-      background: white;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      padding: 12px;
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
-    }
-
-    .battery {
-      width: 220px;
-      height: 14px;
-      border: 1px solid #94a3b8;
-      border-radius: 8px;
-      overflow: hidden;
-      display: inline-block;
-      vertical-align: middle;
-      margin-left: 8px;
-    }
-
-    .battery>div {
-      height: 100%;
-      background: #22c55e;
-      width: 100%;
-      transition: width 0.2s;
-    }
-
-    /* Modal */
-    #surveyModal {
-      position: fixed;
-      inset: 0;
-      display: none;
+      transition: all 0.2s ease;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
-      background: rgba(0, 0, 0, 0.45);
+      gap: 8px;
     }
 
-    #surveyCard {
-      width: 420px;
-      background: white;
-      padding: 16px;
-      border-radius: 12px;
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--text-main);
+      border: 1px solid var(--border);
     }
 
-    label {
-      display: block;
-      margin: 8px 0 6px;
-      font-weight: 600;
+    .btn-secondary:hover {
+      background: #F9FAFB;
+      border-color: #D1D5DB;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 2px 4px rgba(79, 70, 229, 0.3);
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:disabled {
+      background: var(--text-muted);
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    /* Modals Overlay */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(17, 24, 39, 0.6);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal-card {
+      background: var(--surface);
+      width: 100%;
+      max-width: 500px;
+      padding: 32px;
+      border-radius: var(--radius);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      transform: translateY(20px);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .modal-overlay.active .modal-card {
+      transform: translateY(0);
+    }
+
+    .modal-card h2 {
+      margin: 0 0 16px 0;
+      color: var(--text-main);
+    }
+
+    .modal-card p {
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    /* Survey Slider adjustments */
+    .survey-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: -6px;
+      margin-bottom: 16px;
     }
 
     input[type=range] {
       width: 100%;
+      margin: 16px 0;
+      accent-color: var(--primary);
     }
 
-    .muted {
-      color: #64748b;
-      font-size: 12px;
-    }
-
-    .chips {
-      display: flex;
-      gap: 8px;
-      margin: 6px 0 10px;
-      flex-wrap: wrap;
-    }
-
-    .chip {
-      padding: 6px 10px;
-      border: 1px solid #cbd5e1;
-      border-radius: 999px;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .chip.active {
-      background: #0ea5e9;
-      color: white;
-      border-color: #0ea5e9;
-    }
-
-    /* Controls grid */
+    /* Controls form hidden by default */
     #controls {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(250px, 1fr));
-      gap: 12px;
-      margin: 12px 0;
+      display: none;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+      margin: 24px 0;
+      width: 100%;
+      background: var(--surface);
+      padding: 24px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
     }
 
     .ctl {
-      background: white;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
       padding: 12px;
+      background: var(--background);
+      border-radius: 8px;
     }
 
     .ctl h4 {
-      margin: 0 0 8px 0;
+      margin: 0 0 12px 0;
       font-size: 14px;
-      color: #0f172a;
     }
 
-    .ctl .rowline {
+    .rowline {
       display: flex;
       align-items: center;
       gap: 8px;
+      margin-bottom: 8px;
+      font-size: 13px;
     }
 
-    .ctl .val {
-      min-width: 48px;
+    .val {
+      min-width: 40px;
       text-align: right;
-      color: #0f172a;
+      font-family: monospace;
     }
   </style>
 </head>
 
 <body>
   <header>
-    <div><b>Drift–Safety Box</b> — Hard Mode (v6) + Live Controls</div>
+    <h1>Drone Navigation Task</h1>
+    <a href="../index.html" style="text-decoration:none;">
+      <button class="btn-secondary" style="padding: 8px 16px; font-size: 14px;">Exit</button>
+    </a>
   </header>
-  <main>
-    <div id="status">Adjust parameters below and press Start.</div>
 
-    <div id="controls" style="display: none;">
+  <main>
+    <div id="hud-container">
+      <div id="status">Press "Start" to begin the trials.</div>
+      <div id="hud">Waiting to start...</div>
+    </div>
+
+    <div id="grid"></div>
+
+    <div class="toolbar">
+      <button id="startBtn" class="btn-primary">Start Experiment</button>
+      <button id="downloadBtn" class="btn-secondary" style="display:none;">Download Backup (JSON)</button>
+    </div>
+
+    <!-- Hidden admin controls -->
+    <div id="controls">
       <div class="ctl">
         <h4>Trial & Grid</h4>
-        <div class="rowline">
-          <label>Max steps</label>
-          <input id="ctl_max_steps" type="range" min="40" max="120" step="1" value="100">
+        <div class="rowline"><label>Max steps</label><input id="ctl_max_steps" type="range" min="40" max="120" step="1"
+            value="100">
           <div class="val"><span id="val_max_steps">100</span></div>
         </div>
-        <div class="rowline">
-          <label>Grid columns</label>
-          <input id="ctl_cols" type="range" min="12" max="30" step="1" value="20">
+        <div class="rowline"><label>Grid columns</label><input id="ctl_cols" type="range" min="12" max="30" step="1"
+            value="20">
           <div class="val"><span id="val_cols">20</span></div>
         </div>
-        <div class="rowline">
-          <label>Trials/Block</label>
-          <input id="ctl_trials" type="number" min="1" max="50" value="10" style="width:60px; padding:4px;">
-        </div>
+        <div class="rowline"><label>Trials/Block</label><input id="ctl_trials" type="number" min="1" max="50" value="10"
+            style="width:60px; padding:4px;"></div>
       </div>
-
       <div class="ctl">
         <h4>Battery</h4>
-        <div class="rowline">
-          <label>Drain per step</label>
-          <input id="ctl_drain_step" type="range" min="0.5" max="4.0" step="0.1" value="1.0">
+        <div class="rowline"><label>Drain per step</label><input id="ctl_drain_step" type="range" min="0.5" max="4.0"
+            step="0.1" value="1.0">
           <div class="val"><span id="val_drain_step">1.0</span></div>
         </div>
-        <div class="rowline">
-          <label>Drain per collision</label>
-          <input id="ctl_drain_coll" type="range" min="0" max="12" step="0.5" value="2.0">
+        <div class="rowline"><label>Drain collision</label><input id="ctl_drain_coll" type="range" min="0" max="12"
+            step="0.5" value="2.0">
           <div class="val"><span id="val_drain_coll">2.0</span></div>
         </div>
-        <div class="rowline">
-          <label>Urgency extra drain</label>
-          <input id="ctl_urgency" type="range" min="0.0" max="2.0" step="0.1" value="0.5">
+        <div class="rowline"><label>Urgency extra</label><input id="ctl_urgency" type="range" min="0.0" max="2.0"
+            step="0.1" value="0.5">
           <div class="val"><span id="val_urgency">0.5</span></div>
         </div>
       </div>
-
       <div class="ctl">
         <h4>Wind</h4>
-        <div class="rowline">
-          <label>Volatility (low)</label>
-          <input id="ctl_vol_low" type="range" min="0.0" max="0.8" step="0.01" value="0.10">
+        <div class="rowline"><label>Vol (low)</label><input id="ctl_vol_low" type="range" min="0.0" max="0.8"
+            step="0.01" value="0.10">
           <div class="val"><span id="val_vol_low">0.10</span></div>
         </div>
-        <div class="rowline">
-          <label>Volatility (high)</label>
-          <input id="ctl_vol_high" type="range" min="0.0" max="0.8" step="0.01" value="0.10">
+        <div class="rowline"><label>Vol (high)</label><input id="ctl_vol_high" type="range" min="0.0" max="0.8"
+            step="0.01" value="0.10">
           <div class="val"><span id="val_vol_high">0.10</span></div>
         </div>
-        <div class="rowline">
-          <label>Gust rate</label>
-          <input id="ctl_gust_rate" type="range" min="0.0" max="0.8" step="0.01" value="0.10">
+        <div class="rowline"><label>Gust rate</label><input id="ctl_gust_rate" type="range" min="0.0" max="0.8"
+            step="0.01" value="0.10">
           <div class="val"><span id="val_gust_rate">0.10</span></div>
         </div>
-        <div class="rowline">
-          <label>Bias by drift</label>
-          <input id="ctl_bias" type="range" min="0.0" max="0.5" step="0.01" value="0.10">
+        <div class="rowline"><label>Bias</label><input id="ctl_bias" type="range" min="0.0" max="0.5" step="0.01"
+            value="0.10">
           <div class="val"><span id="val_bias">0.10</span></div>
         </div>
       </div>
-
       <div class="ctl">
         <h4>Map Difficulty</h4>
-        <div class="rowline">
-          <label>Dense wall prob</label>
-          <input id="ctl_dense" type="range" min="0.05" max="0.4" step="0.01" value="0.10">
+        <div class="rowline"><label>Dense prob</label><input id="ctl_dense" type="range" min="0.05" max="0.4"
+            step="0.01" value="0.10">
           <div class="val"><span id="val_dense">0.10</span></div>
         </div>
-        <div class="rowline">
-          <label>Sparse wall prob</label>
-          <input id="ctl_sparse" type="range" min="0.02" max="0.3" step="0.01" value="0.10">
+        <div class="rowline"><label>Sparse prob</label><input id="ctl_sparse" type="range" min="0.02" max="0.3"
+            step="0.01" value="0.10">
           <div class="val"><span id="val_sparse">0.10</span></div>
         </div>
-        <div class="rowline">
-          <label>Corridor obstacle keep</label>
-          <input id="ctl_corr_keep" type="range" min="0.00" max="0.7" step="0.01" value="0.10">
-          <div class="val"><span id="val_corr_keep">0.10</span></div>
+        <div class="rowline"><label>Corr keep</label><input id="ctl_corr_keep" type="range" min="0.00" max="1.0"
+            step="0.01" value="0.75">
+          <div class="val"><span id="val_corr_keep">0.75</span></div>
         </div>
       </div>
-
       <div class="ctl">
         <h4>Drift Settings</h4>
-        <div class="rowline">
-          <label>Drift Range (+/-)</label>
-          <input id="ctl_drift_range" type="range" min="0" max="5" step="1" value="1">
+        <div class="rowline"><label>Drift Range</label><input id="ctl_drift_range" type="range" min="0" max="5" step="1"
+            value="1">
           <div class="val"><span id="val_drift_range">1</span></div>
         </div>
-        <div class="rowline">
-          <label>Drift Probability</label>
-          <input id="ctl_drift_prob" type="range" min="0.0" max="1.0" step="0.05" value="0.1">
+        <div class="rowline"><label>Drift Prob</label><input id="ctl_drift_prob" type="range" min="0.0" max="1.0"
+            step="0.05" value="0.1">
           <div class="val"><span id="val_drift_prob">0.1</span></div>
         </div>
       </div>
     </div>
 
-    </div>
-
-    <div id="toolbar">
-      <a href="../index.html" style="text-decoration:none;"><button id="backBtn" style="background:#e2e8f0;">🏠 Back to
-          Home</button></a>
-      <button id="startBtn">Start Experiment</button>
-      <button id="downloadBtn" style="display:none;">Download Data (JSON)</button>
-      <button id="submitAllBtn" style="display:none; background:#0ea5e9; color:white;">Submit All Data</button>
-    </div>
-
-    <div id="hud"></div>
-    <div id="grid"></div>
-
-    <div id="llmPanel"></div>
-
-    <div style="text-align:center; margin-top:10px; color:#475569;">
-      Reach the green goal (right). Gray = walls. Yellow = drone.
-    </div>
   </main>
 
-  <!-- Human post-trial survey modal -->
-  <div id="surveyModal">
-    <div id="surveyCard">
-      <div style="font-weight:700; margin-bottom:6px;">Trial Survey</div>
-      <div id="surveyReason" style="font-size:14px; font-weight:600; margin-bottom:12px; text-align:center;"></div>
-      <label for="beliefSlider">Contextual Belief (0 = Safe, 100 = Dangerous)</label>
-      <input id="beliefSlider" type="range" min="0" max="100" value="50"
-        oninput="document.getElementById('beliefVal').innerText = this.value">
-      <div class="muted" style="text-align: center; margin-top: 5px;">Current Value: <span id="beliefVal">50</span>
+  <!-- Instructions Modal -->
+  <div id="instructionsModal" class="modal-overlay active">
+    <div class="modal-card">
+      <h2>Welcome to the Drone Navigation Task</h2>
+      <p>Your goal is to safely navigate the drone (<span style="color:#FBBF24; font-weight:bold;">yellow square</span>)
+        to the goal (<span style="color:#10B981; font-weight:bold;">green square</span>) on the right side of the map.
+      </p>
+
+      <div
+        style="background:var(--background); padding:16px; border-radius:8px; margin-bottom:24px; font-size:14px; line-height:1.6;">
+        <ul style="padding-left:20px; margin:0;">
+          <li>Use the <b>Arrow Keys</b> to move freely.</li>
+          <li>Avoid the dark gray <b>walls</b>. Hitting them depletes your battery heavily.</li>
+          <li>Beware of <b>wind</b>! The drone might drift unexpectedly.</li>
+          <li>Keep an eye on the <b>Battery</b>. You must reach the goal before it depletes!</li>
+        </ul>
       </div>
 
-      <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:14px;">
-        <button id="skipSurvey">Skip</button>
-        <button id="okSurvey">Submit</button>
+      <div style="display:flex; justify-content:flex-end;">
+        <button id="closeInstructionsBtn" class="btn-primary">I Understand, Let's Begin</button>
       </div>
     </div>
   </div>
 
-  <script src="./js/driver_layers_v6.js?v=8.7"></script>
+  <!-- Trial Survey Modal -->
+  <div id="surveyModal" class="modal-overlay">
+    <div class="modal-card">
+      <h2 id="surveyReason" style="margin-bottom:8px;">Trial Complete</h2>
+      <p style="margin-bottom:12px;">How dangerous did this specific environment feel to navigate?</p>
+
+      <div style="margin: 24px 0;">
+        <label for="beliefSlider" style="font-weight:600; font-size:14px;">Contextual Belief Risk Score (0-100)</label>
+        <input id="beliefSlider" type="range" min="0" max="100" value="50"
+          oninput="document.getElementById('beliefVal').innerText = this.value">
+        <div class="survey-labels">
+          <span>0 (Completely Safe)</span>
+          <span style="font-weight:bold; color:var(--primary); font-size:16px;" id="beliefVal">50</span>
+          <span>100 (Highly Dangerous)</span>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:12px; justify-content:flex-end;">
+        <button id="skipSurvey" class="btn-secondary">Skip</button>
+        <button id="okSurvey" class="btn-primary">Submit Rating</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Task Complete Modal -->
+  <div id="completeModal" class="modal-overlay">
+    <div class="modal-card" style="text-align: center;">
+      <div style="font-size: 48px; margin-bottom: 16px;">🎉</div>
+      <h2>Task Complete!</h2>
+      <p>Thank you for participating. Your data is being securely saved.</p>
+      <div id="saveStatus" style="font-weight:600; color:var(--primary); margin:24px 0;">Saving to database...</div>
+
+      <a href="../index.html" style="text-decoration:none; display:inline-block;">
+        <button class="btn-secondary">Return to Main Menu</button>
+      </a>
+    </div>
+  </div>
+
+  <script src="./js/config.js"></script>
+  <script src="./js/driver_layers_v6.js?v=9.0"></script>
   <script>
-    // Wire slider value labels
+    // Handle Instructions Modal
+    document.getElementById('closeInstructionsBtn').addEventListener('click', () => {
+      document.getElementById('instructionsModal').classList.remove('active');
+    });
+
+    // Wire slider value labels for controls
     const pairs = [
       ['ctl_max_steps', 'val_max_steps'],
       ['ctl_cols', 'val_cols'],
@@ -376,12 +538,14 @@
     pairs.forEach(([i, v]) => {
       const el = document.getElementById(i);
       const out = document.getElementById(v);
-      const fmt = (x) => {
-        const f = parseFloat(x);
-        return Math.abs(f - Math.round(f)) < 1e-6 ? String(Math.round(f)) : String(f);
-      };
-      el.addEventListener('input', () => out.textContent = fmt(el.value));
-      out.textContent = fmt(el.value);
+      if (el && out) {
+        const fmt = (x) => {
+          const f = parseFloat(x);
+          return Math.abs(f - Math.round(f)) < 1e-6 ? String(Math.round(f)) : String(f);
+        };
+        el.addEventListener('input', () => out.textContent = fmt(el.value));
+        out.textContent = fmt(el.value);
+      }
     });
   </script>
 </body>

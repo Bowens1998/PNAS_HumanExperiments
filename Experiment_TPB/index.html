@@ -1,19 +1,26 @@
 <!doctype html>
-<html>
+<html lang="en">
 
 <head>
   <meta charset="utf-8">
-  <title>ER-TPB v2.3 — Emergency Triage Box (ESI-aligned)</title>
+  <title>Emergency Triage Task</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --ink: #0f172a;
-      --muted: #64748b;
-      --line: #e5e7eb;
-      --bg: #fafafa;
-      --pri: #0ea5e9;
-      --act: #10b981;
+      --primary: #4F46E5;
+      --primary-hover: #4338CA;
+      --success: #10B981;
+      --warning: #FBBF24;
+      --danger: #EF4444;
+      --info: #0EA5E9;
+      --background: #F3F4F6;
+      --surface: #FFFFFF;
+      --text-main: #111827;
+      --text-muted: #6B7280;
+      --border: #E5E7EB;
+      --radius: 12px;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     }
 
     * {
@@ -21,370 +28,522 @@
     }
 
     body {
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
       margin: 0;
-      color: var(--ink);
-      background: var(--bg);
+      color: var(--text-main);
+      background: var(--background);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
     }
 
     header {
-      padding: 12px 16px;
-      background: #0f172a;
-      color: white;
+      padding: 16px 24px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
       display: flex;
       align-items: center;
       gap: 12px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     }
 
     header .title {
-      font-weight: 800;
-      letter-spacing: 0.2px;
+      font-weight: 700;
+      font-size: 20px;
     }
 
     main {
-      padding: 16px;
+      padding: 32px 20px;
       max-width: 1100px;
       margin: 0 auto;
+      width: 100%;
+      flex-grow: 1;
     }
 
     #toolbar {
       display: flex;
-      gap: 8px;
+      gap: 12px;
       justify-content: center;
-      margin: 10px 0;
+      margin-bottom: 24px;
       flex-wrap: wrap;
     }
 
     button {
-      padding: 10px 14px;
-      border-radius: 10px;
-      border: 1px solid #cbd5e1;
-      background: #f8fafc;
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      font-family: inherit;
+      font-weight: 600;
+      font-size: 14px;
       cursor: pointer;
+      transition: all 0.2s ease;
     }
 
-    button.primary {
-      background: var(--pri);
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: #F9FAFB;
+      border-color: #D1D5DB;
+    }
+
+    .btn-primary {
+      background: var(--primary);
       color: white;
-      border-color: var(--pri);
+      box-shadow: 0 2px 4px rgba(79, 70, 229, 0.3);
     }
 
-    button:disabled {
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    button:disabled,
+    .btn-primary:disabled {
       opacity: 0.5;
       cursor: not-allowed;
-    }
-
-    .modebtn.active {
-      background: var(--act);
-      color: #042;
-      border-color: #059669;
+      background: var(--border);
+      color: var(--text-muted);
+      box-shadow: none;
+      transform: none;
+      border-color: transparent;
     }
 
     .card {
-      background: white;
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 14px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow);
     }
 
     .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
+      gap: 20px;
+    }
+
+    @media (max-width: 768px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
     }
 
     .panel h3 {
-      margin: 6px 0 10px 0;
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      font-weight: 600;
     }
 
     .pill {
       display: inline-block;
-      padding: 3px 8px;
+      padding: 4px 10px;
       border-radius: 999px;
-      background: #eef2ff;
-      color: #3730a3;
+      background: #EEF2FF;
+      color: var(--primary);
       font-size: 12px;
+      font-weight: 600;
+    }
+
+    .tooltip {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      color: white;
+      font-size: 10px;
+      font-weight: bold;
+      margin-left: 6px;
+      cursor: help;
+    }
+
+    .tooltip::after {
+      content: attr(data-tip);
+      position: absolute;
+      bottom: 150%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #111827;
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      white-space: pre;
+      opacity: 0;
+      visibility: hidden;
+      transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 100;
+      line-height: 1.4;
+      pointer-events: none;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      font-weight: normal;
+    }
+
+    .tooltip:hover::after {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(-50%) translateY(-4px);
     }
 
     .kpi {
       display: flex;
       gap: 12px;
-      margin: 6px 0;
+      margin-bottom: 12px;
       flex-wrap: wrap;
     }
 
     .kpi div {
-      background: #f1f5f9;
-      border: 1px solid #e2e8f0;
-      border-radius: 10px;
-      padding: 6px 8px;
+      background: var(--background);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 14px;
+    }
+
+    .kpi b,
+    .kpi span {
+      font-weight: 600;
+      color: var(--primary);
     }
 
     .muted {
-      color: var(--muted);
+      color: var(--text-muted);
+      font-size: 13px;
     }
 
     #status {
       text-align: center;
-      color: var(--muted);
-      margin-bottom: 8px;
+      font-weight: 500;
+      color: var(--primary);
+      margin-bottom: 16px;
+      font-size: 16px;
     }
 
     #log {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      color: #334155;
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      color: var(--text-main);
+      background: var(--background);
+      border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 8px;
+      padding: 12px;
+      font-size: 13px;
       white-space: pre-wrap;
-      min-height: 48px;
+      min-height: 80px;
+      max-height: 250px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column-reverse;
     }
 
     fieldset {
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin: 0;
     }
 
     legend {
-      font-weight: 700;
-      color: #1f2937;
+      font-weight: 600;
+      color: var(--text-main);
+      padding: 0 8px;
     }
 
     .dx-list {
       display: grid;
       grid-template-columns: 1fr;
-      gap: 6px;
-      margin-top: 6px;
+      gap: 10px;
+      margin-top: 12px;
+      font-size: 14px;
     }
 
-    .row {
+    .dx-list label {
       display: flex;
-      gap: 14px;
-    }
-
-    .col {
-      flex: 1;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
     }
 
     .slider-wrap {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 16px;
+      margin: 16px 0;
+      font-weight: 500;
+      font-size: 14px;
     }
 
     input[type=range] {
       width: 100%;
+      accent-color: var(--primary);
     }
 
     select,
     input[type=number],
     textarea {
       width: 100%;
-      padding: 8px;
-      border: 1px solid #cbd5e1;
+      padding: 10px;
+      border: 1px solid var(--border);
       border-radius: 8px;
+      font-family: inherit;
     }
 
     .hint {
       font-size: 12px;
-      color: #6b7280;
+      color: var(--text-muted);
+      margin-top: 8px;
     }
 
     .banner {
-      background: #fff7ed;
-      border: 1px solid #fed7aa;
-      color: #9a3412;
-      padding: 8px 10px;
-      border-radius: 10px;
-      margin: 8px 0;
+      background: #FFFBEB;
+      border: 1px solid #FDE68A;
+      color: #92400E;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      font-weight: 500;
     }
 
-    .modal-backdrop {
-      display: none;
+    /* Modal Styling */
+    .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.5);
+      background: rgba(17, 24, 39, 0.6);
+      backdrop-filter: blur(4px);
+      display: flex;
       align-items: center;
       justify-content: center;
+      z-index: 50;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
     }
 
-    .modal {
-      background: #fff;
-      width: min(520px, 92vw);
-      border-radius: 14px;
-      border: 1px solid var(--line);
-      padding: 16px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
     }
 
-    .modal h3 {
-      margin: 6px 0 10px 0;
+    .modal-card {
+      background: var(--surface);
+      width: 100%;
+      max-width: 550px;
+      padding: 32px;
+      border-radius: var(--radius);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      transform: translateY(20px);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    .modal .row {
-      display: flex;
-      gap: 10px;
+    .modal-overlay.active .modal-card {
+      transform: translateY(0);
     }
 
-    .modal button {
-      margin-top: 10px;
+    .modal-card h2,
+    .modal-card h3 {
+      margin: 0 0 16px 0;
+      color: var(--text-main);
+    }
+
+    .modal-card p {
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 24px;
     }
   </style>
 </head>
 
 <body>
   <header>
-    <span class="title">ER‑TPB</span> — Emergency Triage Box • v2.3
-    <span
-      style="margin-left: auto; background: #22c55e; color: white; padding: 4px 12px; border-radius: 20px; font-weight: 600; font-size: 14px;"
-      id="progressIndicator">0/0 finished</span>
-  </header>
-  <main>
-    <div id="status">Press <b>Start</b>. Shortcuts: Space=Next, F=Finalize.
+    <div style="display:flex; align-items:center; gap:16px;">
+      <span class="title">Emergency Triage Task</span>
     </div>
+    <div style="display:flex; align-items:center; gap:16px; margin-left:auto;">
+      <span
+        style="background: var(--success); color: white; padding: 6px 12px; border-radius: 999px; font-weight: 600; font-size: 13px;"
+        id="progressIndicator">0/0 finished</span>
+      <a href="../index.html" style="text-decoration:none;"><button class="btn-secondary"
+          style="padding: 6px 16px;">Exit</button></a>
+    </div>
+  </header>
+
+  <main>
+    <div id="status">Press <b>Start</b> to begin. Shortcuts: Space=Next, F=Finalize.</div>
+
     <div id="toolbar">
-      <a href="../index.html" style="text-decoration:none;"><button id="backBtn" style="background:#e2e8f0;">🏠 Back to
-          Home</button></a>
-      <button id="startBtn" class="primary">Start Experiment</button>
-      <button id="advanceBtn" disabled>Next Tick (Space)</button>
-      <button id="finalizeBtn" disabled>Finalize ESI (F)</button>
-      <button id="restartBtn" disabled style="display:none;">Restart (R)</button>
-      <button id="downloadBtn" disabled style="display:none;">Download Data (JSON)</button>
-      <button id="submitAllBtn" class="primary" style="display:none;">Submit All Data</button>
+      <button id="startBtn" class="btn-primary">Start Experiment</button>
+      <button id="advanceBtn" class="btn-secondary" disabled>Next Tick (Space)</button>
+      <button id="finalizeBtn" class="btn-primary" disabled>Finalize Triage (F)</button>
+      <button id="restartBtn" class="btn-secondary" disabled style="display:none;">Restart Trial (R)</button>
+      <button id="downloadBtn" class="btn-secondary" disabled style="display:none;">Download Backup Data</button>
     </div>
 
-    <div class="card" id="controls_panel" style="display:none;">
+    <!-- Hidden Controls -->
+    <div class="card" id="controls_panel" style="display:none; margin-bottom: 24px;">
       <h3>Runtime Controls</h3>
-      <div class="grid">
-        <div>
-          <label>Prevalence</label>
-          <select id="ctl_prevalence">
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+        <div><label class="muted">Prevalence</label><select id="ctl_prevalence">
             <option>low</option>
             <option>high</option>
-          </select>
-          <div class="hint">Higher → more LSI / high-risk cases.</div>
-        </div>
-        <div>
-          <label>Measurement noise</label>
-          <select id="ctl_noise">
+          </select></div>
+        <div><label class="muted">Measurement noise</label><select id="ctl_noise">
             <option>low</option>
             <option>high</option>
-          </select>
-          <div class="hint">Higher noise → harder factual inference.</div>
-        </div>
-        <div>
-          <label>Deterioration volatility</label>
-          <select id="ctl_vol">
+          </select></div>
+        <div><label class="muted">Deterioration volatility</label><select id="ctl_vol">
             <option>low</option>
             <option>high</option>
-          </select>
-          <div class="hint">Higher volatility → more abrupt changes.</div>
-        </div>
-        <div>
-          <label>Max ticks per case</label>
-          <input id="ctl_maxticks" type="number" min="6" max="20" value="12">
-          <div class="hint">Hard cap: case auto-ends at this tick.</div>
-        </div>
-        <div>
-          <label>Trials per block</label>
-          <input id="ctl_trials" type="number" min="1" max="24" value="10">
-          <div class="hint">Blocks=1 in v2.3.</div>
-        </div>
+          </select></div>
+        <div><label class="muted">Max ticks per case</label><input id="ctl_maxticks" type="number" min="6" max="20"
+            value="12"></div>
+        <div><label class="muted">Trials per block</label><input id="ctl_trials" type="number" min="1" max="24"
+            value="10"></div>
       </div>
     </div>
 
-    <!-- Parallel Execution Control Removed -->
-
-    <div class="grid" style="margin-top:12px;">
+    <div style="display: flex; flex-direction: column; gap: 24px; margin-bottom: 24px;">
       <div class="card panel">
         <h3>Patient Profile</h3>
         <div class="kpi">
           <div>Age: <b id="Age">—</b></div>
           <div>Comorbidities: <b id="Comorbid">—</b></div>
           <div>Complaint: <b id="CC">—</b></div>
-          <div>True Dx: <b id="TrueDx">—</b></div>
+          <div style="display:none">True Dx: <b id="TrueDx">—</b></div> <!-- Hidden TrueDx to avoid participant bias -->
         </div>
       </div>
 
       <div class="card panel">
-        <h3>Vitals & Trends <span id="tickLbl" class="pill"></span></h3>
+        <h3>Vitals & Trends <span id="tickLbl" class="pill" style="float:right;"></span></h3>
         <div class="kpi">
-          <div>HR: <b id="HR">—</b></div>
-          <div>BP: <b id="BP">—</b></div>
-          <div>RR: <b id="RR">—</b></div>
-          <div>SpO2: <b id="SpO2">—</b></div>
-          <div>Temp: <b id="Temp">—</b></div>
-          <div>Mental: <b id="AVPU">—</b></div>
+          <div>HR<span class="tooltip" data-tip="Heart Rate&#10;Normal: 60-100 bpm">?</span>: <b id="HR">—</b></div>
+          <div>BP<span class="tooltip" data-tip="Blood Pressure&#10;Normal: ~120/80 mmHg">?</span>: <b id="BP">—</b>
+          </div>
+          <div>RR<span class="tooltip" data-tip="Respiratory Rate&#10;Normal: 12-20 breaths/min">?</span>: <b
+              id="RR">—</b></div>
+          <div>SpO2<span class="tooltip" data-tip="Oxygen Saturation&#10;Normal: 95-100%">?</span>: <b id="SpO2">—</b>
+          </div>
+          <div>Temp<span class="tooltip" data-tip="Body Temperature&#10;Normal: 36.5-37.5°C">?</span>: <b
+              id="Temp">—</b></div>
+          <div>Mental<span class="tooltip"
+              data-tip="AVPU Scale&#10;A: Alert, V: Verbal&#10;P: Pain, U: Unresponsive">?</span>: <b id="AVPU">—</b>
+          </div>
         </div>
         <div class="kpi">
           <div>Trend: <span id="Trend">—</span></div>
-          <div>Flags: <span id="Flags">—</span></div>
+          <div>Observation: <span id="Flags">—</span></div>
         </div>
       </div>
-    </div>
 
-    <div class="grid" style="margin-top:12px;">
       <div class="card panel">
-        <h3>Factual belief</h3>
+        <h3>Factual Belief</h3>
         <fieldset>
-          <legend>Choose likely diagnosis (this tick)</legend>
+          <legend>Diagnosis Prediction</legend>
+          <div class="hint" style="margin-top:0;">Select the most likely diagnosis based on current vitals.</div>
           <div id="dxList" class="dx-list"></div>
-          <div class="hint">Pick the single most likely diagnosis right now based on vitals & changes.</div>
         </fieldset>
       </div>
       <div class="card panel">
-        <h3>Contextual belief</h3>
-        <div class="banner" id="ctxBanner" style="display:none;">Please update the slider if you feel the overall
-          situation changed.</div>
+        <h3>Contextual Belief</h3>
+        <div class="banner" id="ctxBanner" style="display:none;">Update the risk slider based on recent patient changes.
+        </div>
         <fieldset>
-          <legend>Overall situation (continuous)</legend>
+          <legend>Overall Case Risk</legend>
           <div class="slider-wrap">
-            <span>Safe</span>
+            <span>Stable</span>
             <input id="ctxSlider" type="range" min="0" max="100" value="0">
             <span>Critical</span>
           </div>
-          <div class="hint">Adjust this a few times per case. Current: <b id="ctxVal">0</b>/100</div>
+          <div class="muted" style="text-align:center;">Current Assessment: <b id="ctxVal"
+              style="color:var(--primary);">0</b>/100</div>
         </fieldset>
       </div>
     </div>
-    </div>
 
-    <div style="margin-top:10px;" class="card">
+    <div class="card panel">
       <h3>Event Log</h3>
-      <div id="log"
-        style="max-height: 250px; overflow-y: auto; display: flex; flex-direction: column-reverse; background: #f8fafc; padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
-        —</div>
+      <div id="log">—</div>
     </div>
-
   </main>
 
-  <div id="modalBg" class="modal-backdrop">
-    <div class="modal">
-      <h3>Finalize ESI</h3>
-      <p>Please assign an ESI level based on the entire case:</p>
-      <div class="row">
-        <select id="esiSelect">
-          <option value="1">1 — Immediate life-saving intervention</option>
-          <option value="2" selected>2 — High-risk / emergent</option>
-          <option value="3">3 — Stable, 2+ resources</option>
-          <option value="4">4 — Stable, one resource</option>
-          <option value="5">5 — Stable, no resources</option>
-        </select>
+  <!-- Instructions Modal -->
+  <div id="instructionsModal" class="modal-overlay active">
+    <div class="modal-card">
+      <h2>Emergency Triage Task</h2>
+      <p>Welcome. In this task, you will act as a triage nurse assessing arriving ER patients over a series of brief
+        "ticks" (time steps).</p>
+
+      <div style="background:var(--background); padding:16px; border-radius:8px; margin-bottom:24px;">
+        <ul style="margin:0;">
+          <li>Review the patient's continuously updating <strong>Vitals</strong>.</li>
+          <li>Predict the most likely <strong>Diagnosis</strong> (Factual Belief).</li>
+          <li>Rate the patient's overall <strong>Risk Level</strong> (0-100).</li>
+          <li>Step forward in time using <strong>Spacebar</strong>. When ready, <strong>Finalize Triage (F)</strong> to
+            assign an ESI level.</li>
+        </ul>
       </div>
-      <div class="hint" id="ctxReqHint" style="margin-top:6px; display:none;">
-        Tip: You have few contextual updates. Consider adjusting the slider to reflect the overall situation before
-        confirming.
+
+      <div style="display:flex; justify-content:flex-end;">
+        <button id="closeInstructionsBtn" class="btn-primary">I Understand</button>
       </div>
-      <button id="confirmESI" class="primary">Confirm</button>
     </div>
   </div>
 
+  <!-- ESI Modal -->
+  <div id="modalBg" class="modal-overlay"> <!-- Originally used modalBg ID -->
+    <div class="modal-card">
+      <h3>Assign Final ESI Triage Level</h3>
+      <p>Based on the complete case progression, assign an Emergency Severity Index (ESI) level:</p>
+
+      <select id="esiSelect" style="margin-bottom:16px;">
+        <option value="1">1 — Immediate life-saving intervention</option>
+        <option value="2" selected>2 — High-risk / emergent</option>
+        <option value="3">3 — Stable, 2+ resources needed</option>
+        <option value="4">4 — Stable, 1 resource needed</option>
+        <option value="5">5 — Stable, no resources</option>
+      </select>
+
+      <div class="banner" id="ctxReqHint" style="display:none; margin-top:0;">
+        Tip: You made very few risk assessments. Consider adjusting the risk slider before confirming.
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:12px;">
+        <button id="cancelESI" class="btn-secondary">Cancel</button>
+        <button id="confirmESI" class="btn-primary">Confirm ESI</button>
+      </div>
+    </div>
   </div>
 
-  <script src="./js/driver_tpb_esi_v2_3.js"></script>
+  <!-- Task Complete Modal -->
+  <div id="completeModal" class="modal-overlay">
+    <div class="modal-card" style="text-align: center;">
+      <div style="font-size: 48px; margin-bottom: 16px;">🏥</div>
+      <h2>Shift Complete!</h2>
+      <p>Thank you for completing the Emergency Triage task. Your decisions have been recorded.</p>
+      <div id="saveStatus" style="font-weight:600; color:var(--primary); margin:24px 0;">Saving to database...</div>
+
+      <a href="../index.html" style="text-decoration:none; display:inline-block;">
+        <button class="btn-secondary">Return to Main Menu</button>
+      </a>
+    </div>
+  </div>
+
+  <script src="./js/config.js"></script>
+  <script src="./js/driver_tpb_esi_v2_3.js?v=2.3.1"></script>
+  <script>
+    document.getElementById('closeInstructionsBtn').addEventListener('click', () => {
+      document.getElementById('instructionsModal').classList.remove('active');
+    });
+    document.getElementById('cancelESI').addEventListener('click', () => {
+      document.getElementById('modalBg').classList.remove('active');
+    });
+  </script>
 </body>
 
 </html>

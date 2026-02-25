@@ -1,6 +1,6 @@
 // DSB v6 with Live Controls + OpenAI API Integration
 (async function () {
-  const defaults = await (await fetch('./js/config.json', { cache: 'no-store' })).json();
+  const defaults = window.APP_CONFIG;
   let config = JSON.parse(JSON.stringify(defaults)); // shallow clone for mutation by UI
 
   // Cheat code logic
@@ -239,12 +239,12 @@
     return new Promise(resolve => {
       let chosenContext = null;
       document.querySelectorAll('.chip').forEach(x => x.classList.remove('active'));
-      surveyModal.style.display = 'flex';
+      surveyModal.classList.add('active'); // Changed to use classList
 
       const reasonEl = document.getElementById('surveyReason');
       if (reasonEl) {
-        reasonEl.innerText = reason ? `Trial Ended: ${reason}` : 'Trial Ended';
-        reasonEl.style.color = reason === 'goal' ? '#16a34a' : '#dc2626';
+        reasonEl.innerText = reason === 'goal' ? 'Trial Complete! Goal Reached 🏁' : (reason === 'battery' ? 'Battery Depleted 🔋' : 'Trial Ended');
+        reasonEl.style.color = reason === 'goal' ? 'var(--success)' : 'var(--danger)';
       }
 
       if (beliefSlider) {
@@ -253,7 +253,7 @@
       }
 
       const cleanup = () => {
-        surveyModal.style.display = 'none';
+        surveyModal.classList.remove('active'); // Changed to use classList
       };
 
       okSurvey.onclick = () => {
@@ -327,6 +327,13 @@
       let d = config.battery.drain_per_step + (collided ? config.battery.drain_collision_penalty : 0);
       if (factors.urgency === 'on') d += (config.battery.urgency_extra || 0);
       battery = Math.max(0, battery - d);
+
+      if (collided) {
+        gridEl.classList.remove('shake');
+        void gridEl.offsetWidth; // trigger reflow
+        gridEl.classList.add('shake');
+        setTimeout(() => gridEl.classList.remove('shake'), 300);
+      }
     }
 
     function atGoal() {
@@ -447,12 +454,33 @@
         const isLastTrial = (runLog.trials.length >= totalTrials);
 
         if (isLastTrial) {
-          const subAll = document.getElementById('submitAllBtn');
-          if (subAll) {
-            subAll.style.display = 'inline-block';
+          // Show Task Complete Modal
+          const completeModal = document.getElementById('completeModal');
+          const saveStatus = document.getElementById('saveStatus');
+          if (completeModal) completeModal.classList.add('active');
+
+          // Auto-submit to Webhook
+          try {
+            const payload = {
+              experimentId: "DSB",
+              timestamp: new Date().toLocaleString() + ' ' + Intl.DateTimeFormat().resolvedOptions().timeZone,
+              data: JSON.stringify(runLog)
+            };
+            await fetch(WEBHOOK_URL, {
+              method: "POST",
+              mode: "no-cors",
+              headers: { "Content-Type": "text/plain;charset=utf-8" },
+              body: JSON.stringify(payload)
+            });
+            if (saveStatus) saveStatus.innerText = "Data saved successfully! You may now return.";
+            if (saveStatus) saveStatus.style.color = "var(--success)";
+          } catch (err) {
+            console.error(err);
+            if (saveStatus) saveStatus.innerText = "Error saving data. Backup saved locally.";
+            if (saveStatus) saveStatus.style.color = "var(--danger)";
+            const subAll = document.getElementById('downloadBtn');
+            if (subAll) subAll.style.display = 'inline-block';
           }
-        } else {
-          alert("successfully submitted");
         }
 
         resolveTrial();
@@ -485,38 +513,8 @@
     document.body.appendChild(a); a.click(); a.remove();
   };
 
-  const submitAllBtn = document.getElementById('submitAllBtn');
-  if (submitAllBtn) {
-    submitAllBtn.onclick = async () => {
-      const url = "https://script.google.com/macros/s/AKfycbzyZHP0KBEsq0hnyFrE8sWIVuZFFHIbhvngklXmiAojQa_y6ZYbiL9bjZQmGJXV2yXK/exec";
-      if (url) {
-        try {
-          const payload = {
-            experimentId: "DSB",
-            timestamp: new Date().toISOString(),
-            data: JSON.stringify(runLog)
-          };
-          await fetch(url, {
-            method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-          });
-          alert("All trials are successfully submitted");
-        } catch (err) {
-          console.error(err);
-          alert("Error submitting data. Saved locally. Please download JSON later if issue persists.");
-        }
-      } else {
-        alert("All trials are successfully submitted");
-      }
-    };
-  }
-
-  // Setup data submission via webhook (Google Apps Script)
+  // Auto-submission is handled directly in proceed() function now.
   const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbzyZHP0KBEsq0hnyFrE8sWIVuZFFHIbhvngklXmiAojQa_y6ZYbiL9bjZQmGJXV2yXK/exec";
-
-  // Legacy submitBtn logic removed
 
   // Removed API Configuration UI
 

@@ -1,398 +1,539 @@
 <!doctype html>
-<html>
+<html lang="en">
 
 <head>
   <meta charset="utf-8">
-  <title>Financial Investment Task — v1.1.1</title>
+  <title>Financial Investment Task</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --ink: #0f172a;
-      --muted: #64748b;
-      --line: #e5e7eb;
-      --bg: #f8fafc;
+      --primary: #4F46E5;
+      --primary-hover: #4338CA;
+      --success: #10B981;
+      --warning: #F59E0B;
+      --danger: #EF4444;
+      --info: #0EA5E9;
+      --background: #F3F4F6;
+      --surface: #FFFFFF;
+      --text-main: #111827;
+      --text-muted: #6B7280;
+      --border: #E5E7EB;
+      --radius: 12px;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     }
 
     body {
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
       margin: 0;
-      color: var(--ink);
-      background: var(--bg);
+      color: var(--text-main);
+      background: var(--background);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
     }
 
     header {
-      background: #0f172a;
-      color: white;
-      padding: 12px 16px;
+      padding: 16px 24px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
     }
 
     main {
-      max-width: 1100px;
+      padding: 32px 20px;
+      max-width: 1400px;
       margin: 0 auto;
-      padding: 16px;
+      flex-grow: 1;
     }
 
     h3 {
-      margin: 10px 0;
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-main);
     }
 
     .row {
       display: flex;
-      gap: 16px;
+      gap: 20px;
       flex-wrap: wrap;
     }
 
     .col {
       flex: 1;
-      min-width: 260px;
+      min-width: 300px;
     }
 
     .card {
-      background: white;
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 12px;
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
     }
 
     #toolbar {
       display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin: 10px 0;
+      gap: 12px;
+      justify-content: center;
+      margin-bottom: 24px;
     }
 
     button {
-      padding: 8px 12px;
+      padding: 10px 20px;
       border-radius: 8px;
-      border: 1px solid #cbd5e1;
-      background: white;
-      cursor: pointer;
-    }
-
-    button.primary {
-      background: #0ea5e9;
-      color: white;
-      border-color: #0ea5e9;
-    }
-
-    button:disabled {
-      opacity: .6;
-      cursor: not-allowed;
-    }
-
-    .controls {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(260px, 1fr));
-      gap: 12px;
-    }
-
-    .control {
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 10px;
-      background: white;
-    }
-
-    .control label {
+      border: none;
+      font-family: inherit;
       font-weight: 600;
-      display: block;
-      margin-bottom: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
     }
 
-    .val {
-      color: var(--muted);
-      font-size: 12px;
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: #F9FAFB;
+      border-color: #D1D5DB;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 2px 4px rgba(79, 70, 229, 0.3);
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:disabled {
+      background: var(--text-muted);
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    /* Hidden Configuration Controls */
+    #controls_panel {
+      display: none;
     }
 
     input[type=range],
     input[type=number] {
       width: 100%;
+      accent-color: var(--primary);
+      margin: 8px 0;
     }
 
     .muted {
-      color: var(--muted);
-      font-size: 12px;
+      color: var(--text-muted);
+      font-size: 13px;
     }
 
     .grid3 {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
+      gap: 16px;
+    }
+
+    .asset-block {
+      background: var(--background);
+      padding: 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 4px 10px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      background: var(--surface);
+      margin-bottom: 12px;
+    }
+
+    .spark-wrap {
+      position: relative;
+      margin-bottom: 8px;
+    }
+
+    .axis-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    canvas.spark {
+      width: 100%;
+      height: 220px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+
+    .tickbar {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
     }
 
     .radio-row {
       display: flex;
       gap: 12px;
       align-items: center;
+      margin-bottom: 12px;
+      font-size: 14px;
+    }
+
+    .radio-row input {
+      margin-right: 4px;
     }
 
     .alloc {
       display: flex;
-      gap: 10px;
+      gap: 12px;
       align-items: center;
+      margin-bottom: 12px;
+      background: var(--background);
+      padding: 8px 12px;
+      border-radius: 8px;
+    }
+
+    .alloc .pill {
+      width: 16px;
+      text-align: center;
+      margin: 0;
     }
 
     .alloc input[type=range] {
-      width: 160px;
+      flex: 1;
     }
 
-    .pill {
-      display: inline-block;
-      padding: 3px 8px;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      font-size: 12px;
-      color: var(--muted);
+    .alloc span[id^="vw"] {
+      width: 40px;
+      text-align: right;
+      font-weight: 600;
+    }
+
+    .lock-btn {
+      background: none;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+      padding: 4px;
+      margin-left: 4px;
+      opacity: 0.4;
+      transition: all 0.2s;
+    }
+
+    .lock-btn:hover {
+      opacity: 0.8;
+      transform: scale(1.1);
+    }
+
+    .alloc input[type=range]:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
 
     #status {
-      margin-top: 8px;
-      color: var(--muted);
-    }
-
-    #llmPanel {
-      display: none;
-    }
-
-    textarea {
-      width: 100%;
-      min-height: 130px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    }
-
-    .sep {
-      height: 1px;
-      background: var(--line);
-      margin: 12px 0;
-    }
-
-    .spark-wrap {
-      position: relative;
-    }
-
-    .axis-label {
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 4px;
-    }
-
-    canvas.spark {
-      width: 100%;
-      height: 120px;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      background: white;
-    }
-
-    .tickbar {
-      position: absolute;
-      left: 4px;
-      top: 4px;
-      bottom: 4px;
-      width: 40px;
-      pointer-events: none;
+      text-align: center;
+      font-weight: 500;
+      color: var(--primary);
+      margin-bottom: 8px;
+      font-size: 16px;
     }
 
     #error {
       display: none;
       background: #fee2e2;
       color: #991b1b;
-      border: 1px solid #fecaca;
-      padding: 10px;
+      padding: 12px;
       border-radius: 8px;
-      margin-top: 8px;
+      margin-bottom: 16px;
+      text-align: center;
     }
 
-    /* Parallel Monitor Styles */
-    .worker-card {
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 6px;
-      padding: 8px 12px;
+    .sep {
+      height: 1px;
+      background: var(--border);
+      margin: 24px 0;
+    }
+
+    /* Modal Styling */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(17, 24, 39, 0.6);
+      backdrop-filter: blur(4px);
       display: flex;
       align-items: center;
-      gap: 12px;
+      justify-content: center;
+      z-index: 50;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
     }
 
-    .worker-id {
-      font-weight: 600;
-      min-width: 70px;
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
     }
 
-    .worker-progress {
-      flex: 1;
-    }
-
-    .worker-progress progress {
+    .modal-card {
+      background: var(--surface);
       width: 100%;
-      height: 16px;
-      border-radius: 8px;
-      overflow: hidden;
+      max-width: 550px;
+      padding: 32px;
+      border-radius: var(--radius);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      transform: translateY(20px);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    .worker-status {
-      font-size: 12px;
-      min-width: 140px;
-      text-align: right;
-      color: #64748b;
+    .modal-overlay.active .modal-card {
+      transform: translateY(0);
     }
 
-    .worker-progress progress::-webkit-progress-bar {
-      background: #e2e8f0;
+    .modal-card h2 {
+      margin: 0 0 16px 0;
+      color: var(--text-main);
     }
 
-    .worker-progress progress::-webkit-progress-value {
-      background: #22c55e;
+    .modal-card p {
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    .modal-card ul {
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 24px;
+      padding-left: 20px;
+    }
+
+    .modal-card li {
+      margin-bottom: 8px;
     }
   </style>
 </head>
 
 <body>
   <header>
-    <div><b>Financial Investment Task — v1.1.1</b> • Factual → Contextual → Schematic</div>
+    <h1>Financial Investment Task</h1>
+    <a href="../index.html" style="text-decoration:none;">
+      <button class="btn-secondary" style="padding: 8px 16px;">Exit</button>
+    </a>
   </header>
+
   <main>
     <div id="status">Loading…</div>
     <div id="error"></div>
+
     <div id="toolbar">
-      <a href="../index.html" style="text-decoration:none;"><button id="backBtn" style="background:#e2e8f0;">🏠 Back to
-          Home</button></a>
-      <button id="startBtn" class="primary" disabled>Start Experiment</button>
-      <button id="downloadBtn" disabled style="display:none;">Download Data (JSON)</button>
-      <button id="submitAllBtn" class="primary" style="display:none;">Submit All Data</button>
+      <button id="startBtn" class="btn-primary" disabled>Start Task</button>
+      <button id="downloadBtn" class="btn-secondary" style="display:none;">Download Backup Data</button>
     </div>
 
-    <div class="card" id="controls_panel" style="display: none;">
+    <!-- Hidden admin controls via cheat code -->
+    <div class="card" id="controls_panel">
       <h3>Runtime Controls</h3>
-      <div class="controls">
-        <div class="control">
-          <label>Trials <span class="val" id="v_trials"></span></label>
-          <input id="T_trials" type="range" min="1" max="100" step="1" value="10">
+      <div class="controls" style="display: grid; grid-template-columns: repeat(3, minmax(260px, 1fr)); gap: 12px;">
+        <!-- Retaining all input IDs for JS compatibility -->
+        <div class="control" style="border: 1px solid var(--border); padding: 10px;"><label>Trials <span class="muted"
+              id="v_trials"></span></label><input id="T_trials" type="range" min="1" max="100" step="1" value="10">
         </div>
-        <div class="control">
-          <label>Window Length (W) <span class="val" id="v_W"></span></label>
-          <input id="W_window" type="range" min="40" max="200" step="5">
+        <div class="control" style="border: 1px solid var(--border); padding: 10px;"><label>Window Length (W) <span
+              class="muted" id="v_W"></span></label><input id="W_window" type="range" min="40" max="200" step="5"></div>
+        <div class="control" style="border: 1px solid var(--border); padding: 10px;"><label>Trend Threshold <span
+              class="muted" id="v_thr"></span></label><input id="trend_thresh" type="range" min="0.005" max="0.06"
+            step="0.005"></div>
+        <div class="control" style="border: 1px solid var(--border); padding: 10px;"><label>Calm→Turb prob <span
+              class="muted" id="v_ct"></span></label><input id="p_calm_to_turb" type="range" min="0.02" max="0.40"
+            step="0.01"></div>
+        <div class="control" style="border: 1px solid var(--border); padding: 10px;"><label>Turb→Calm prob <span
+              class="muted" id="v_tc"></span></label><input id="p_turb_to_calm" type="range" min="0.02" max="0.40"
+            step="0.01"></div>
+        <div class="control" style="border: 1px solid var(--border); padding: 10px;"><label>ρ (calm) <span class="muted"
+              id="v_rhoc"></span></label><input id="rho_calm" type="range" min="0.00" max="0.60" step="0.01"></div>
+        <div class="control" style="border: 1px solid var(--border); padding: 10px;"><label>ρ (turb) <span class="muted"
+              id="v_rhot"></span></label><input id="rho_turb" type="range" min="0.10" max="0.95" step="0.01"></div>
+        <div class="control" style="border: 1px solid var(--border); padding: 10px;"><label>σ (calm): L/M/H</label>
+          <div class="row" style="gap:5px;"><input id="sigma_calm_L" type="number" step="0.001" min="0.001"><input
+              id="sigma_calm_M" type="number" step="0.001" min="0.001"><input id="sigma_calm_H" type="number"
+              step="0.001" min="0.001"></div>
         </div>
-        <div class="control">
-          <label>Trend Threshold (slope) <span class="val" id="v_thr"></span></label>
-          <input id="trend_thresh" type="range" min="0.005" max="0.06" step="0.005">
-        </div>
-        <div class="control">
-          <label>Calm→Turb prob <span class="val" id="v_ct"></span></label>
-          <input id="p_calm_to_turb" type="range" min="0.02" max="0.40" step="0.01">
-        </div>
-        <div class="control">
-          <label>Turb→Calm prob <span class="val" id="v_tc"></span></label>
-          <input id="p_turb_to_calm" type="range" min="0.02" max="0.40" step="0.01">
-        </div>
-        <div class="control">
-          <label>ρ (calm) <span class="val" id="v_rhoc"></span></label>
-          <input id="rho_calm" type="range" min="0.00" max="0.60" step="0.01">
-        </div>
-        <div class="control">
-          <label>ρ (turb) <span class="val" id="v_rhot"></span></label>
-          <input id="rho_turb" type="range" min="0.10" max="0.95" step="0.01">
-        </div>
-        <div class="control">
-          <label>σ (calm): L / M / H</label>
-          <div class="row">
-            <input id="sigma_calm_L" type="number" step="0.001" min="0.001">
-            <input id="sigma_calm_M" type="number" step="0.001" min="0.001">
-            <input id="sigma_calm_H" type="number" step="0.001" min="0.001">
-          </div>
-        </div>
-        <div class="control">
-          <label>σ (turb): L / M / H</label>
-          <div class="row">
-            <input id="sigma_turb_L" type="number" step="0.001" min="0.001">
-            <input id="sigma_turb_M" type="number" step="0.001" min="0.001">
-            <input id="sigma_turb_H" type="number" step="0.001" min="0.001">
-          </div>
+        <div class="control" style="border: 1px solid var(--border); padding: 10px;"><label>σ (turb): L/M/H</label>
+          <div class="row" style="gap:5px;"><input id="sigma_turb_L" type="number" step="0.001" min="0.001"><input
+              id="sigma_turb_M" type="number" step="0.001" min="0.001"><input id="sigma_turb_H" type="number"
+              step="0.001" min="0.001"></div>
         </div>
       </div>
     </div>
-    <div style="margin-top:8px;" class="muted">Means μ_L=μ_M=μ_H are fixed and equal.</div>
 
-    <!-- Parallel Execution Control Removed -->
+    <!-- Main Experiment Interface -->
+    <div style="display: flex; flex-direction: column; gap: 24px; margin-top: 12px;">
 
-    <div class="row" style="margin-top:12px;">
-      <div class="col card">
-        <h3>Stage A — Factual (per-asset trend)</h3>
+      <!-- STAGE A -->
+      <div class="card panel">
+        <h3>Stage A: Per-Asset Trend</h3>
         <div class="grid3">
-          <div>
-            <div class="pill">Low risk (L)</div>
+          <div class="asset-block">
+            <div class="pill">Low Risk (L)</div>
             <div class="spark-wrap">
-              <canvas id="cL" class="spark" width="320" height="120"></canvas>
+              <canvas id="cL" class="spark"></canvas>
               <div id="ticksL" class="tickbar"></div>
             </div>
             <div class="axis-label">Δ% vs. time (steps)</div>
             <div class="radio-row">
-              <label><input type="radio" name="trendL" value="up"> up</label>
-              <label><input type="radio" name="trendL" value="flat" checked> flat</label>
-              <label><input type="radio" name="trendL" value="down"> down</label>
+              <label><input type="radio" name="trendL" value="up"> Up</label>
+              <label><input type="radio" name="trendL" value="flat" checked> Flat</label>
+              <label><input type="radio" name="trendL" value="down"> Down</label>
             </div>
-            <div>Confidence (0–100) <input id="confL" type="range" min="0" max="100" value="50"></div>
+            <div style="font-size:13px; font-weight:500;">Confidence <input id="confL" type="range" min="0" max="100"
+                value="50"></div>
           </div>
-          <div>
-            <div class="pill">Medium risk (M)</div>
+          <div class="asset-block">
+            <div class="pill" style="color:var(--info); border-color:var(--info);">Medium Risk (M)</div>
             <div class="spark-wrap">
-              <canvas id="cM" class="spark" width="320" height="120"></canvas>
+              <canvas id="cM" class="spark"></canvas>
               <div id="ticksM" class="tickbar"></div>
             </div>
             <div class="axis-label">Δ% vs. time (steps)</div>
             <div class="radio-row">
-              <label><input type="radio" name="trendM" value="up"> up</label>
-              <label><input type="radio" name="trendM" value="flat" checked> flat</label>
-              <label><input type="radio" name="trendM" value="down"> down</label>
+              <label><input type="radio" name="trendM" value="up"> Up</label>
+              <label><input type="radio" name="trendM" value="flat" checked> Flat</label>
+              <label><input type="radio" name="trendM" value="down"> Down</label>
             </div>
-            <div>Confidence (0–100) <input id="confM" type="range" min="0" max="100" value="50"></div>
+            <div style="font-size:13px; font-weight:500;">Confidence <input id="confM" type="range" min="0" max="100"
+                value="50"></div>
           </div>
-          <div>
-            <div class="pill">High risk (H)</div>
+          <div class="asset-block">
+            <div class="pill" style="color:var(--danger); border-color:var(--danger);">High Risk (H)</div>
             <div class="spark-wrap">
-              <canvas id="cH" class="spark" width="320" height="120"></canvas>
+              <canvas id="cH" class="spark"></canvas>
               <div id="ticksH" class="tickbar"></div>
             </div>
             <div class="axis-label">Δ% vs. time (steps)</div>
             <div class="radio-row">
-              <label><input type="radio" name="trendH" value="up"> up</label>
-              <label><input type="radio" name="trendH" value="flat" checked> flat</label>
-              <label><input type="radio" name="trendH" value="down"> down</label>
+              <label><input type="radio" name="trendH" value="up"> Up</label>
+              <label><input type="radio" name="trendH" value="flat" checked> Flat</label>
+              <label><input type="radio" name="trendH" value="down"> Down</label>
             </div>
-            <div>Confidence (0–100) <input id="confH" type="range" min="0" max="100" value="50"></div>
+            <div style="font-size:13px; font-weight:500;">Confidence <input id="confH" type="range" min="0" max="100"
+                value="50"></div>
           </div>
         </div>
       </div>
-      <div class="col card">
-        <h3>Stage B — Contextual (market risk)</h3>
-        <div>How risky does the market feel right now?</div>
-        <div style="display:flex; gap:10px; align-items:center; margin-top:6px;">
-          <span class="muted">calm</span>
-          <input id="ctxRisk" type="range" min="0" max="100" value="50">
-          <span class="muted">turbulent</span>
+
+      <!-- STAGE B -->
+      <div class="card panel">
+        <h3>Stage B: Market Risk</h3>
+        <div style="font-size:14px; margin-bottom:8px;">How risky does the market feel right now?</div>
+        <div
+          style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-muted); max-width: 600px;">
+          <span>Calm</span><span>Turbulent</span>
         </div>
-        <div class="muted" id="ctxLabel">reported: 50/100</div>
-        <div class="sep"></div>
-        <h3>Stage C — Schematic (portfolio allocation)</h3>
-        <div class="alloc"><span class="pill">L</span><input id="wL" type="range" min="0" max="100" step="5"
-            value="33"><span id="vwL">33%</span></div>
-        <div class="alloc"><span class="pill">M</span><input id="wM" type="range" min="0" max="100" step="5"
-            value="33"><span id="vwM">33%</span></div>
-        <div class="alloc"><span class="pill">H</span><input id="wH" type="range" min="0" max="100" step="5"
-            value="34"><span id="vwH">34%</span></div>
-        <div class="muted">Sum is enforced to 100%. Adjusting any slider rebalances the other two proportionally.</div>
-        <div style="margin-top:10px;">
-          <button id="submitTrial" class="primary">Submit Trial</button>
+        <input style="max-width: 600px;" id="ctxRisk" type="range" min="0" max="100" value="50">
+        <div class="muted" id="ctxLabel" style="font-weight:500; margin-top: 8px;">Reported: 50 / 100</div>
+      </div>
+
+      <!-- STAGE C -->
+      <div class="card panel">
+        <h3>Stage C: Portfolio Allocation</h3>
+        <div style="font-size:13px; color:var(--text-muted); margin-bottom:12px;">Distribute your funds across the three
+          assets. Total will automatically balance to 100%.</div>
+
+        <div style="max-width: 600px;">
+          <div class="alloc">
+            <div class="pill">L</div><input id="wL" type="range" min="0" max="100" step="1" value="33"><span
+              id="vwL">33%</span>
+            <button id="lockL" class="lock-btn">🔓</button>
+          </div>
+          <div class="alloc">
+            <div class="pill" style="color:var(--info); border-color:var(--info);">M</div><input id="wM" type="range"
+              min="0" max="100" step="1" value="33"><span id="vwM">33%</span>
+            <button id="lockM" class="lock-btn">🔓</button>
+          </div>
+          <div class="alloc">
+            <div class="pill" style="color:var(--danger); border-color:var(--danger);">H</div><input id="wH"
+              type="range" min="0" max="100" step="1" value="34"><span id="vwH">34%</span>
+            <button id="lockH" class="lock-btn">🔓</button>
+          </div>
+        </div>
+
+        <div style="margin-top:24px;">
+          <button id="submitTrial" class="btn-primary" style="width:100%; max-width: 600px;">Finalize Trial</button>
         </div>
       </div>
-    </div>
 
     </div>
-    </div>
-    </div>
+  </main>
 
-    <script src="./js/app_v111.js"></script>
+  <!-- Instructions Modal -->
+  <div id="instructionsModal" class="modal-overlay active">
+    <div class="modal-card">
+      <h2>Financial Investment Task</h2>
+      <p>Welcome to the investment simulation. In each round, you will review the recent performance of three assets:
+        <strong>Low Risk (L)</strong>, <strong>Medium Risk (M)</strong>, and <strong>High Risk (H)</strong>.
+      </p>
+
+      <div style="background:var(--background); padding:16px; border-radius:8px; margin-bottom:24px;">
+        <ul style="margin:0;">
+          <li><strong>Stage A:</strong> Predict the trend (Up, Flat, Down) and state your confidence.</li>
+          <li><strong>Stage B:</strong> Rate the overall market turbulence (Calm vs. Turbulent).</li>
+          <li><strong>Stage C:</strong> Allocate your portfolio percentages based on your analysis.</li>
+        </ul>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end;">
+        <button id="closeInstructionsBtn" class="btn-primary">I Understand</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Task Complete Modal -->
+  <div id="completeModal" class="modal-overlay">
+    <div class="modal-card" style="text-align: center;">
+      <div style="font-size: 48px; margin-bottom: 16px;">📈</div>
+      <h2>Portfolios Submitted!</h2>
+      <p>Thank you for participating in the Financial Investment task. Your data is being securely saved.</p>
+      <div id="saveStatus" style="font-weight:600; color:var(--primary); margin:24px 0;">Saving to database...</div>
+
+      <a href="../index.html" style="text-decoration:none; display:inline-block;">
+        <button class="btn-secondary">Return to Main Menu</button>
+      </a>
+    </div>
+  </div>
+
+  <script src="./js/config.js"></script>
+  <script src="./js/app_v111.js"></script>
+  <script>
+    // Handle Instructions Modal
+    document.getElementById('closeInstructionsBtn').addEventListener('click', () => {
+      document.getElementById('instructionsModal').classList.remove('active');
+    });
+  </script>
 </body>
 
 </html>
