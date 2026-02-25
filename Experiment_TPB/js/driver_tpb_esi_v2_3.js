@@ -160,13 +160,26 @@
   // Build BF diagnosis options
   const dxList = R('dxList');
   const dxOptions = (cfg.dx_options || []);
+
+  // Diagnosis descriptions based on vitals/flags logic
+  const dxDescriptions = {
+    'Respiratory failure': 'Breathing clearly fails. High Heart/Breathing Rate, Low Oxygen (SpO2), cyanosis (blue lips).',
+    'Cardiac event': 'Heart attack or similar. High Heart Rate, chest pain, sweating.',
+    'Massive hemorrhage': 'Severe bleeding. High Heart Rate, Low Blood Pressure, pale, cool skin.',
+    'Infection / sepsis': 'Severe infection. High Heart/Breathing Rate, Fever, warm skin.',
+    'Neurological event (stroke-like)': 'Brain emergency. High Blood Pressure, slurred speech, facial droop.',
+    'Stable / no acute condition': 'Patient is okay. Normal vitals, just mild discomfort or anxiety.'
+  };
+
   function rebuildDx() {
     dxList.innerHTML = '';
     dxOptions.forEach((label, i) => {
       const id = `dx_${i}`;
+      const desc = dxDescriptions[label] || '';
+      const tooltipHTML = desc ? `<span class="tooltip" data-tip="${desc}">?</span>` : '';
       const row = document.createElement('label');
       row.style.display = 'flex'; row.style.alignItems = 'center'; row.style.gap = '8px';
-      row.innerHTML = `<input type="radio" name="dx" value="${label}" id="${id}"><span>${label}</span>`;
+      row.innerHTML = `<input type="radio" name="dx" value="${label}" id="${id}"><span>${label}${tooltipHTML}</span>`;
       dxList.appendChild(row);
     });
   }

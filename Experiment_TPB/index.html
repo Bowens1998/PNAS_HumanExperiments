@@ -404,7 +404,7 @@
         <div><label class="muted">Max ticks per case</label><input id="ctl_maxticks" type="number" min="6" max="20"
             value="12"></div>
         <div><label class="muted">Trials per block</label><input id="ctl_trials" type="number" min="1" max="24"
-            value="10"></div>
+            value="3"></div>
       </div>
     </div>
 
@@ -413,8 +413,10 @@
         <h3>Patient Profile</h3>
         <div class="kpi">
           <div>Age: <b id="Age">—</b></div>
-          <div>Comorbidities: <b id="Comorbid">—</b></div>
-          <div>Complaint: <b id="CC">—</b></div>
+          <div>Comorbidities<span class="tooltip" data-tip="Other diseases the patient already has">?</span>: <b
+              id="Comorbid">—</b></div>
+          <div>Complaint<span class="tooltip" data-tip="The main reason the patient came to the ER">?</span>: <b
+              id="CC">—</b></div>
           <div style="display:none">True Dx: <b id="TrueDx">—</b></div> <!-- Hidden TrueDx to avoid participant bias -->
         </div>
       </div>
@@ -436,8 +438,11 @@
           </div>
         </div>
         <div class="kpi">
-          <div>Trend: <span id="Trend">—</span></div>
-          <div>Observation: <span id="Flags">—</span></div>
+          <div>Trend<span class="tooltip"
+              data-tip="How the patient's condition is changing over the short term">?</span>: <span id="Trend">—</span>
+          </div>
+          <div>Observation<span class="tooltip" data-tip="Visual signs or symptoms noticed by the nurse">?</span>: <span
+              id="Flags">—</span></div>
         </div>
       </div>
 
@@ -472,20 +477,21 @@
     </div>
   </main>
 
-  <!-- Instructions Modal -->
   <div id="instructionsModal" class="modal-overlay active">
     <div class="modal-card">
       <h2>Emergency Triage Task</h2>
-      <p>Welcome. In this task, you will act as a triage nurse assessing arriving ER patients over a series of brief
-        "ticks" (time steps).</p>
+      <p>Welcome to the ER! In this game, you are the triage nurse. Patients will arrive, and you need to figure out
+        what's wrong and how serious it is over a few short time steps.</p>
 
       <div style="background:var(--background); padding:16px; border-radius:8px; margin-bottom:24px;">
-        <ul style="margin:0;">
-          <li>Review the patient's continuously updating <strong>Vitals</strong>.</li>
-          <li>Predict the most likely <strong>Diagnosis</strong> (Factual Belief).</li>
-          <li>Rate the patient's overall <strong>Risk Level</strong> (0-100).</li>
-          <li>Step forward in time using <strong>Spacebar</strong>. When ready, <strong>Finalize Triage (F)</strong> to
-            assign an ESI level.</li>
+        <ul style="margin:0; line-height: 1.6;">
+          <li>Look at the patient's <strong>Vitals</strong> (like heart rate and blood pressure). They will change over
+            time!</li>
+          <li>Guess the <strong>Diagnosis</strong> (what disease they have).</li>
+          <li>Rate their <strong>Risk Level</strong> from 0 (Safe) to 100 (Critical danger).</li>
+          <li>Press <strong>Spacebar</strong> to move to the next time step. When you are confident, press
+            <strong>F</strong> to finish and assign an ESI (Emergency Severity Index) level.
+          </li>
         </ul>
       </div>
 

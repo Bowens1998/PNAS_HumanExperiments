@@ -1,7 +1,7 @@
 window.APP_CONFIG = {
   "session": "InvestTaskWebV1_1_1",
   "ui_defaults": {
-    "T_trials": 10,
+    "T_trials": 3,
     "W_window": 80,
     "p_calm_to_turb": 0.12,
     "p_turb_to_calm": 0.18,

@@ -1,12 +1,12 @@
 window.APP_CONFIG = {
     "session": "TPB-ESI-v2.3",
     "max_ticks": 12,
+    "trials_per_block": 3,
     "tick_range": [
-        9,
-        12
+        7,
+        14
     ],
     "blocks": 1,
-    "trials_per_block": 8,
     "seed": 1312,
     "ui_defaults": {
         "prevalence_high": 0.42,

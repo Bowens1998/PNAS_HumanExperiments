@@ -104,6 +104,20 @@
       if (Math.random() < config._corr_keep) continue; // keep some obstacles
       walls.delete(`${Math.floor(config.grid.rows / 2)},${c}`);
     }
+
+    // Ensure no column is completely blocked
+    for (let c = 1; c < cols - 1; c++) {
+      let blockedCount = 0;
+      for (let r = 0; r < rows; r++) {
+        if (walls.has(`${r},${c}`)) blockedCount++;
+      }
+      if (blockedCount === rows) {
+        // Complete vertical block detected. Punch a hole somewhere.
+        const unblockRow = Math.floor(Math.random() * rows);
+        walls.delete(`${unblockRow},${c}`);
+      }
+    }
+
     return walls;
   }
 

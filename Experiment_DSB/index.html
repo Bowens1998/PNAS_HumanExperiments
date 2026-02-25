@@ -381,7 +381,7 @@
             value="20">
           <div class="val"><span id="val_cols">20</span></div>
         </div>
-        <div class="rowline"><label>Trials/Block</label><input id="ctl_trials" type="number" min="1" max="50" value="10"
+        <div class="rowline"><label>Trials/Block</label><input id="ctl_trials" type="number" min="1" max="50" value="3"
             style="width:60px; padding:4px;"></div>
       </div>
       <div class="ctl">
@@ -452,17 +452,18 @@
   <div id="instructionsModal" class="modal-overlay active">
     <div class="modal-card">
       <h2>Welcome to the Drone Navigation Task</h2>
-      <p>Your goal is to safely navigate the drone (<span style="color:#FBBF24; font-weight:bold;">yellow square</span>)
-        to the goal (<span style="color:#10B981; font-weight:bold;">green square</span>) on the right side of the map.
+      <p>Your goal is to safely fly the drone (<span style="color:#FBBF24; font-weight:bold;">yellow square</span>)
+        all the way to the landing pad (<span style="color:#10B981; font-weight:bold;">green square</span>) on the right
+        side.
       </p>
 
       <div
         style="background:var(--background); padding:16px; border-radius:8px; margin-bottom:24px; font-size:14px; line-height:1.6;">
         <ul style="padding-left:20px; margin:0;">
-          <li>Use the <b>Arrow Keys</b> to move freely.</li>
-          <li>Avoid the dark gray <b>walls</b>. Hitting them depletes your battery heavily.</li>
-          <li>Beware of <b>wind</b>! The drone might drift unexpectedly.</li>
-          <li>Keep an eye on the <b>Battery</b>. You must reach the goal before it depletes!</li>
+          <li>Use the <b>Arrow Keys</b> to move around.</li>
+          <li>Don't crash into the dark gray <b>walls</b>! Hitting them will drain your battery super fast.</li>
+          <li>Watch out for the <b>wind</b>! It might blow your drone off course unexpectedly.</li>
+          <li>Keep an eye on the <b>Battery</b> bar. You have to reach the goal before it runs out!</li>
         </ul>
       </div>
 

@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const FALLBACK = {
     session: 'InvestTaskWebV1_1_1',
     ui_defaults: {
-      T_trials: 10, W_window: 80,
+      T_trials: 3, W_window: 80,
       p_calm_to_turb: 0.12, p_turb_to_calm: 0.18,
       mu_L: 0.0008, mu_M: 0.0008, mu_H: 0.0008,
       sigma_calm_L: 0.006, sigma_calm_M: 0.010, sigma_calm_H: 0.016,
@@ -144,7 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let mode = 'human';
 
-    function drawSparkPct(canvas, arrPct, ticksEl, color) {
+    function drawSparkPct(canvas, arrPct, ticksEl, color, forcedRange = 50) {
       const rect = canvas.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
       canvas.width = rect.width * dpr;
@@ -156,7 +156,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const W = rect.width, H = rect.height;
       ctx.clearRect(0, 0, W, H);
       const n = arrPct.length;
-      const min = Math.min(...arrPct), max = Math.max(...arrPct);
+
+      // Dynamic Y-axis scale with a fixed overall range centered around the data
+      const dataMin = Math.min(...arrPct);
+      const dataMax = Math.max(...arrPct);
+      const center = (dataMin + dataMax) / 2;
+      const min = center - forcedRange / 2, max = center + forcedRange / 2;
 
       const padX = 20, padY = 32;
       const x = (i) => padX + i * (W - padX * 2) / (n - 1);
@@ -258,9 +263,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderTrial() {
-      drawSparkPct(cL, trialObj.pct.L, ticksL, '#10b981');
-      drawSparkPct(cM, trialObj.pct.M, ticksM, '#0ea5e9');
-      drawSparkPct(cH, trialObj.pct.H, ticksH, '#ef4444');
+      const rL = Math.max(...trialObj.pct.L) - Math.min(...trialObj.pct.L);
+      const rM = Math.max(...trialObj.pct.M) - Math.min(...trialObj.pct.M);
+      const rH = Math.max(...trialObj.pct.H) - Math.min(...trialObj.pct.H);
+      const maxRange = Math.max(50, rL, rM, rH);
+
+      drawSparkPct(cL, trialObj.pct.L, ticksL, '#10b981', maxRange);
+      drawSparkPct(cM, trialObj.pct.M, ticksM, '#0ea5e9', maxRange);
+      drawSparkPct(cH, trialObj.pct.H, ticksH, '#ef4444', maxRange);
       ctxLabel.textContent = `reported: ${ctxRisk.value}/100`;
       vwL.textContent = wL.value + '%'; vwM.textContent = wM.value + '%'; vwH.textContent = wH.value + '%';
     }

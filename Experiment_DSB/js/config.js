@@ -13,7 +13,7 @@ window.APP_CONFIG = {
         "drain_collision_penalty": 2.0
     },
     "blocks": 1,
-    "trials_per_block": 10,
+    "trials_per_block": 3,
     "manipulations": {
         "volatility": [
             "high",

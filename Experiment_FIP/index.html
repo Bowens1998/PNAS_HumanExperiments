@@ -361,7 +361,7 @@
       <div class="controls" style="display: grid; grid-template-columns: repeat(3, minmax(260px, 1fr)); gap: 12px;">
         <!-- Retaining all input IDs for JS compatibility -->
         <div class="control" style="border: 1px solid var(--border); padding: 10px;"><label>Trials <span class="muted"
-              id="v_trials"></span></label><input id="T_trials" type="range" min="1" max="100" step="1" value="10">
+              id="v_trials"></span></label><input id="T_trials" type="range" min="1" max="100" step="1" value="3">
         </div>
         <div class="control" style="border: 1px solid var(--border); padding: 10px;"><label>Window Length (W) <span
               class="muted" id="v_W"></span></label><input id="W_window" type="range" min="40" max="200" step="5"></div>
@@ -397,9 +397,12 @@
       <!-- STAGE A -->
       <div class="card panel">
         <h3>Stage A: Per-Asset Trend</h3>
+        <div style="font-size:13px; color:var(--text-muted); margin-bottom:12px;">
+          The charts below show price changes as a percentage. The central grey line marks 0% (no change).
+        </div>
         <div class="grid3">
           <div class="asset-block">
-            <div class="pill">Low Risk (L)</div>
+            <div class="pill">Index 1: contains 1/3 of the market</div>
             <div class="spark-wrap">
               <canvas id="cL" class="spark"></canvas>
               <div id="ticksL" class="tickbar"></div>
@@ -414,7 +417,8 @@
                 value="50"></div>
           </div>
           <div class="asset-block">
-            <div class="pill" style="color:var(--info); border-color:var(--info);">Medium Risk (M)</div>
+            <div class="pill" style="color:var(--info); border-color:var(--info);">Index 2: contains 1/3 of the market
+              trend</div>
             <div class="spark-wrap">
               <canvas id="cM" class="spark"></canvas>
               <div id="ticksM" class="tickbar"></div>
@@ -429,7 +433,8 @@
                 value="50"></div>
           </div>
           <div class="asset-block">
-            <div class="pill" style="color:var(--danger); border-color:var(--danger);">High Risk (H)</div>
+            <div class="pill" style="color:var(--danger); border-color:var(--danger);">Index 3: contains 1/3 of the
+              market trend</div>
             <div class="spark-wrap">
               <canvas id="cH" class="spark"></canvas>
               <div id="ticksH" class="tickbar"></div>
@@ -466,18 +471,18 @@
 
         <div style="max-width: 600px;">
           <div class="alloc">
-            <div class="pill">L</div><input id="wL" type="range" min="0" max="100" step="1" value="33"><span
-              id="vwL">33%</span>
+            <div class="pill" style="width: auto;">Index 1</div><input id="wL" type="range" min="0" max="100" step="1"
+              value="33"><span id="vwL">33%</span>
             <button id="lockL" class="lock-btn">🔓</button>
           </div>
           <div class="alloc">
-            <div class="pill" style="color:var(--info); border-color:var(--info);">M</div><input id="wM" type="range"
-              min="0" max="100" step="1" value="33"><span id="vwM">33%</span>
+            <div class="pill" style="width: auto; color:var(--info); border-color:var(--info);">Index 2</div><input
+              id="wM" type="range" min="0" max="100" step="1" value="33"><span id="vwM">33%</span>
             <button id="lockM" class="lock-btn">🔓</button>
           </div>
           <div class="alloc">
-            <div class="pill" style="color:var(--danger); border-color:var(--danger);">H</div><input id="wH"
-              type="range" min="0" max="100" step="1" value="34"><span id="vwH">34%</span>
+            <div class="pill" style="width: auto; color:var(--danger); border-color:var(--danger);">Index 3</div><input
+              id="wH" type="range" min="0" max="100" step="1" value="34"><span id="vwH">34%</span>
             <button id="lockH" class="lock-btn">🔓</button>
           </div>
         </div>
@@ -494,15 +499,17 @@
   <div id="instructionsModal" class="modal-overlay active">
     <div class="modal-card">
       <h2>Financial Investment Task</h2>
-      <p>Welcome to the investment simulation. In each round, you will review the recent performance of three assets:
-        <strong>Low Risk (L)</strong>, <strong>Medium Risk (M)</strong>, and <strong>High Risk (H)</strong>.
-      </p>
+      <p>Welcome to the investment simulation! Imagine you are a portfolio manager. You need to look at three different
+        market indices and decide how to invest your money in them.</p>
 
       <div style="background:var(--background); padding:16px; border-radius:8px; margin-bottom:24px;">
         <ul style="margin:0;">
-          <li><strong>Stage A:</strong> Predict the trend (Up, Flat, Down) and state your confidence.</li>
-          <li><strong>Stage B:</strong> Rate the overall market turbulence (Calm vs. Turbulent).</li>
-          <li><strong>Stage C:</strong> Allocate your portfolio percentages based on your analysis.</li>
+          <li><strong>Stage A:</strong> Look at the charts. The charts show price changes (percentages on the side). The
+            grey line in the middle means 0% (no change). Guess if each index will go Up, Flat, or Down next!</li>
+          <li><strong>Stage B:</strong> How crazy does the market feel right now? Slide the bar to rate it from Calm to
+            Turbulent.</li>
+          <li><strong>Stage C:</strong> Time to invest! Drag the sliders to split your money (100% total) between Index
+            1, Index 2, and Index 3 based on your analysis.</li>
         </ul>
       </div>
 
