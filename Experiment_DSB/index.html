@@ -490,7 +490,6 @@
       </div>
 
       <div style="display:flex; gap:12px; justify-content:flex-end;">
-        <button id="skipSurvey" class="btn-secondary">Skip</button>
         <button id="okSurvey" class="btn-primary">Submit Rating</button>
       </div>
     </div>
@@ -503,10 +502,9 @@
       <h2>Task Complete!</h2>
       <p>Thank you for participating. Your data is being securely saved.</p>
       <div id="saveStatus" style="font-weight:600; color:var(--primary); margin:24px 0;">Saving to database...</div>
-
-      <a href="../index.html" style="text-decoration:none; display:inline-block;">
-        <button class="btn-secondary">Return to Main Menu</button>
-      </a>
+      <div id="waitMsg" style="color:var(--text-muted); font-size:14px; margin-top:16px;">
+        Please do not close this window until the save is complete.
+      </div>
     </div>
   </div>
 

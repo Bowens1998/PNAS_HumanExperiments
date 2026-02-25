@@ -56,6 +56,9 @@
   const okSurvey = document.getElementById('okSurvey');
   const skipSurvey = document.getElementById('skipSurvey');
 
+  const completeModal = document.getElementById('completeModal');
+  const saveStatus = document.getElementById('saveStatus');
+
   // Removed analyze button logic
 
   let mode = 'human';
@@ -259,10 +262,6 @@
       okSurvey.onclick = () => {
         const val = Number(beliefSlider.value);
         const result = { context_belief: val };
-        cleanup(); resolve(result);
-      };
-      skipSurvey.onclick = () => {
-        const result = { context_belief: null };
         cleanup(); resolve(result);
       };
     });
@@ -472,8 +471,10 @@
               headers: { "Content-Type": "text/plain;charset=utf-8" },
               body: JSON.stringify(payload)
             });
-            if (saveStatus) saveStatus.innerText = "Data saved successfully! You may now return.";
+            if (saveStatus) saveStatus.innerText = "Data saved successfully! You may now close this window.";
             if (saveStatus) saveStatus.style.color = "var(--success)";
+            const waitMsg = document.getElementById('waitMsg');
+            if (waitMsg) waitMsg.style.display = 'none';
           } catch (err) {
             console.error(err);
             if (saveStatus) saveStatus.innerText = "Error saving data. Backup saved locally.";
