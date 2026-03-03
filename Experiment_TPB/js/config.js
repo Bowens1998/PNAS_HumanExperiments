@@ -1,7 +1,7 @@
 window.APP_CONFIG = {
     "session": "TPB-ESI-v2.3",
     "max_ticks": 12,
-    "trials_per_block": 3,
+    "trials_per_block": 5,
     "tick_range": [
         7,
         14
