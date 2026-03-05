@@ -358,7 +358,40 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('lockL').textContent = '🔓'; document.getElementById('lockL').style.opacity = '';
       document.getElementById('lockM').textContent = '🔓'; document.getElementById('lockM').style.opacity = '';
       document.getElementById('lockH').textContent = '🔓'; document.getElementById('lockH').style.opacity = '';
-      wL.disabled = false; wM.disabled = false; wH.disabled = false;
+
+      // Enforce Sequential Locking
+      ctxRisk.disabled = true;
+      wL.disabled = true; wM.disabled = true; wH.disabled = true;
+      document.getElementById('lockL').disabled = true;
+      document.getElementById('lockM').disabled = true;
+      document.getElementById('lockH').disabled = true;
+      document.getElementById('submitTrial').disabled = true;
+
+      // Event listeners for unlocking logic
+      const unlockStageB = () => { ctxRisk.disabled = false; };
+      const unlockStageC = () => {
+        wL.disabled = false; wM.disabled = false; wH.disabled = false;
+        document.getElementById('lockL').disabled = false;
+        document.getElementById('lockM').disabled = false;
+        document.getElementById('lockH').disabled = false;
+      };
+      const unlockSubmit = () => { document.getElementById('submitTrial').disabled = false; };
+
+      // Stage A unlocks Stage B
+      ['trendL', 'trendM', 'trendH'].forEach(name => {
+        document.querySelectorAll(`input[name="${name}"]`).forEach(el => {
+          el.addEventListener('change', unlockStageB, { once: true });
+        });
+      });
+      ['confL', 'confM', 'confH'].forEach(id => {
+        document.getElementById(id).addEventListener('input', unlockStageB, { once: true });
+      });
+
+      // Stage B unlocks Stage C
+      ctxRisk.addEventListener('input', unlockStageC, { once: true });
+
+      // Stage C unlocks Submit
+      [wL, wM, wH].forEach(el => el.addEventListener('input', unlockSubmit, { once: true }));
 
       wL.value = 33; wM.value = 33; wH.value = 34; renderTrial();
 

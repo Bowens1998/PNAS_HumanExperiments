@@ -118,6 +118,28 @@
       }
     }
 
+    // Ensure the start position is not completely surrounded
+    const startR = Math.floor(rows / 2), startC = 0;
+    const startNeighbors = [
+      [startR - 1, startC], [startR + 1, startC], [startR, startC + 1]
+    ].filter(([r, c]) => r >= 0 && r < rows && c >= 0 && c < cols);
+
+    if (startNeighbors.every(([r, c]) => walls.has(`${r},${c}`))) {
+      const [ur, uc] = startNeighbors[Math.floor(Math.random() * startNeighbors.length)];
+      walls.delete(`${ur},${uc}`);
+    }
+
+    // Ensure the goal position is not completely surrounded
+    const goalR = Math.floor(rows / 2), goalC = cols - 1;
+    const goalNeighbors = [
+      [goalR - 1, goalC], [goalR + 1, goalC], [goalR, goalC - 1]
+    ].filter(([r, c]) => r >= 0 && r < rows && c >= 0 && c < cols);
+
+    if (goalNeighbors.every(([r, c]) => walls.has(`${r},${c}`))) {
+      const [ur, uc] = goalNeighbors[Math.floor(Math.random() * goalNeighbors.length)];
+      walls.delete(`${ur},${uc}`);
+    }
+
     return walls;
   }
 
@@ -264,9 +286,23 @@
         reasonEl.style.color = reason === 'goal' ? 'var(--success)' : 'var(--danger)';
       }
 
+      if (okSurvey) {
+        okSurvey.disabled = true; // Disable until slider is moved
+      }
+
       if (beliefSlider) {
         beliefSlider.value = "50";
         if (beliefVal) beliefVal.innerText = "50";
+
+        // Remove existing listener to avoid duplicates if showSurvey is called multiple times
+        const newSlider = beliefSlider.cloneNode(true);
+        beliefSlider.parentNode.replaceChild(newSlider, beliefSlider);
+        // Re-assign reference
+        const beliefSliderRef = document.getElementById('beliefSlider');
+        beliefSliderRef.addEventListener('input', () => {
+          if (beliefVal) beliefVal.innerText = beliefSliderRef.value;
+          if (okSurvey) okSurvey.disabled = false;
+        });
       }
 
       const cleanup = () => {
@@ -274,7 +310,8 @@
       };
 
       okSurvey.onclick = () => {
-        const val = Number(beliefSlider.value);
+        const beliefSliderRef = document.getElementById('beliefSlider');
+        const val = Number(beliefSliderRef ? beliefSliderRef.value : 50);
         const result = { context_belief: val };
         cleanup(); resolve(result);
       };

@@ -302,7 +302,25 @@
     tickIdx = 0; done = false;
 
     ctxSlider.value = 0; ctxVal.innerText = '0'; ctxUpdateCount = 0;
-    dxList.querySelectorAll('input[name="dx"]').forEach(e => e.checked = false);
+    dxList.querySelectorAll('input[name="dx"]').forEach(e => {
+      e.checked = false;
+      e.disabled = false;
+    });
+
+    // Enforce Sequential Locking
+    ctxSlider.disabled = true;
+    btn.final.disabled = true;
+
+    // Stage A (Dx Select) unlocks Stage B (Ctx Slider)
+    const unlockStageB = () => { ctxSlider.disabled = false; };
+    dxList.querySelectorAll('input[name="dx"]').forEach(el => {
+      el.addEventListener('change', unlockStageB, { once: true });
+    });
+
+    // Stage B (Ctx Slider) unlocks Finalize button
+    const unlockFinalize = () => { btn.final.disabled = false; };
+    ctxSlider.addEventListener('input', unlockFinalize, { once: true });
+
     renderPatient(patient, cc, trueDx);
 
     log(`New trial: T=${T} (cap ${cap}), Dx=${trueDx}, Sev=${severity0}, CC=${cc}, age=${patient.age}, comorbid=${JSON.stringify(patient.comorbid)}`);
