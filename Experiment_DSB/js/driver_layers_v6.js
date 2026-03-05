@@ -373,7 +373,6 @@
 
     render(agent, walls, battery);
 
-    // Helper to build prompt state
     const getPromptState = () => ({
       step,
       r: agent.r,
@@ -394,14 +393,17 @@
     });
 
     let awaiting = true;
+    const trialAbortController = new AbortController();
+
     const onKey = (e) => {
       if (mode !== 'human' || !awaiting) return;
+      if (e.repeat) return; // Ignore if the key is being held down
       if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
       e.preventDefault();
       const mapKey = { 'ArrowUp': 'UP', 'ArrowDown': 'DOWN', 'ArrowLeft': 'LEFT', 'ArrowRight': 'RIGHT' };
       stepOnce(mapKey[e.key], '');
     };
-    document.addEventListener('keydown', onKey);
+    document.addEventListener('keydown', onKey, { signal: trialAbortController.signal });
 
     function applyDrain(collided) {
       let d = config.battery.drain_per_step + (collided ? config.battery.drain_collision_penalty : 0);
@@ -513,7 +515,7 @@
     function finish(why) {
       if (!awaiting) return; // Already finished
       awaiting = false;
-      document.removeEventListener('keydown', onKey);
+      trialAbortController.abort(); // Destroy the keydown listener
       trialLog.end_reason = why;
       runLog.trials.push(trialLog);
 
