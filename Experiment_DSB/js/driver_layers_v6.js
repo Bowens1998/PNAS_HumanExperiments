@@ -118,26 +118,53 @@
       }
     }
 
-    // Ensure the start position is not completely surrounded
-    const startR = Math.floor(rows / 2), startC = 0;
-    const startNeighbors = [
-      [startR - 1, startC], [startR + 1, startC], [startR, startC + 1]
-    ].filter(([r, c]) => r >= 0 && r < rows && c >= 0 && c < cols);
+    // Ensure the start and goal positions are not trapped in a larger cage
+    function ensureReachable(r, c) {
+      const visited = new Set();
+      const queue = [[r, c]];
+      visited.add(`${r},${c}`);
+      let openCount = 0;
 
-    if (startNeighbors.every(([r, c]) => walls.has(`${r},${c}`))) {
-      const [ur, uc] = startNeighbors[Math.floor(Math.random() * startNeighbors.length)];
-      walls.delete(`${ur},${uc}`);
+      while (queue.length > 0) {
+        const [currR, currC] = queue.shift();
+        openCount++;
+
+        // If we can reach 15 empty tiles, we consider it safely unconfined.
+        if (openCount >= 15) return true;
+
+        const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+        for (const [dr, dc] of dirs) {
+          const nr = currR + dr;
+          const nc = currC + dc;
+          if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
+            const key = `${nr},${nc}`;
+            if (!walls.has(key) && !visited.has(key)) {
+              visited.add(key);
+              queue.push([nr, nc]);
+            }
+          }
+        }
+      }
+      return false;
     }
 
-    // Ensure the goal position is not completely surrounded
-    const goalR = Math.floor(rows / 2), goalC = cols - 1;
-    const goalNeighbors = [
-      [goalR - 1, goalC], [goalR + 1, goalC], [goalR, goalC - 1]
-    ].filter(([r, c]) => r >= 0 && r < rows && c >= 0 && c < cols);
+    // Iteratively punch holes if start is trapped
+    const startR = Math.floor(rows / 2), startC = 0;
+    let safetyNet = 100;
+    while (!ensureReachable(startR, startC) && safetyNet-- > 0) {
+      // Find a random wall near the start and delete it
+      let r = Math.max(0, startR - 2 + Math.floor(Math.random() * 5));
+      let c = Math.max(0, startC + Math.floor(Math.random() * 4));
+      walls.delete(`${r},${c}`);
+    }
 
-    if (goalNeighbors.every(([r, c]) => walls.has(`${r},${c}`))) {
-      const [ur, uc] = goalNeighbors[Math.floor(Math.random() * goalNeighbors.length)];
-      walls.delete(`${ur},${uc}`);
+    // Iteratively punch holes if goal is trapped
+    const goalR = Math.floor(rows / 2), goalC = cols - 1;
+    safetyNet = 100;
+    while (!ensureReachable(goalR, goalC) && safetyNet-- > 0) {
+      let r = Math.max(0, goalR - 2 + Math.floor(Math.random() * 5));
+      let c = Math.max(0, goalC - 3 + Math.floor(Math.random() * 4));
+      walls.delete(`${r},${c}`);
     }
 
     return walls;
@@ -274,6 +301,8 @@
     return value;
   }
 
+  let beliefSliderAbortController = null;
+
   function showSurvey(reason) {
     return new Promise(resolve => {
       let chosenContext = null;
@@ -290,19 +319,21 @@
         okSurvey.disabled = true; // Disable until slider is moved
       }
 
-      if (beliefSlider) {
-        beliefSlider.value = "50";
+      const beliefSliderRef = document.getElementById('beliefSlider');
+
+      if (beliefSliderRef) {
+        beliefSliderRef.value = "50";
         if (beliefVal) beliefVal.innerText = "50";
 
-        // Remove existing listener to avoid duplicates if showSurvey is called multiple times
-        const newSlider = beliefSlider.cloneNode(true);
-        beliefSlider.parentNode.replaceChild(newSlider, beliefSlider);
-        // Re-assign reference
-        const beliefSliderRef = document.getElementById('beliefSlider');
+        if (beliefSliderAbortController) {
+          beliefSliderAbortController.abort();
+        }
+        beliefSliderAbortController = new AbortController();
+
         beliefSliderRef.addEventListener('input', () => {
           if (beliefVal) beliefVal.innerText = beliefSliderRef.value;
           if (okSurvey) okSurvey.disabled = false;
-        });
+        }, { signal: beliefSliderAbortController.signal });
       }
 
       const cleanup = () => {
@@ -310,7 +341,6 @@
       };
 
       okSurvey.onclick = () => {
-        const beliefSliderRef = document.getElementById('beliefSlider');
         const val = Number(beliefSliderRef ? beliefSliderRef.value : 50);
         const result = { context_belief: val };
         cleanup(); resolve(result);
