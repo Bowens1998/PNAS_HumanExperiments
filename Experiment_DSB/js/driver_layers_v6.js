@@ -91,51 +91,20 @@
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
   function newMap(density) {
-    const p = density === 'dense' ? config._dense : config._sparse;
-    const walls = new Set();
     const rows = config.grid.rows, cols = config.grid.cols;
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        if ((r === Math.floor(rows / 2) && c === 0) || (r === Math.floor(rows / 2) && c === cols - 1)) continue;
-        if (Math.random() < p) walls.add(`${r},${c}`);
-      }
-    }
-    for (let c = 0; c < cols; c++) {
-      if (Math.random() < config._corr_keep) continue; // keep some obstacles
-      walls.delete(`${Math.floor(config.grid.rows / 2)},${c}`);
-    }
+    const startR = Math.floor(rows / 2), startC = 0;
+    const goalR = Math.floor(rows / 2), goalC = cols - 1;
 
-    // Ensure no column is completely blocked
-    for (let c = 1; c < cols - 1; c++) {
-      let blockedCount = 0;
-      for (let r = 0; r < rows; r++) {
-        if (walls.has(`${r},${c}`)) blockedCount++;
-      }
-      if (blockedCount === rows) {
-        // Complete vertical block detected. Punch a hole somewhere.
-        const unblockRow = Math.floor(Math.random() * rows);
-        walls.delete(`${unblockRow},${c}`);
-      }
-    }
-
-    // Ensure the start and goal positions are not trapped in a larger cage
-    function ensureReachable(r, c) {
+    // BFS: check if start can reach goal
+    function hasPath(walls) {
       const visited = new Set();
-      const queue = [[r, c]];
-      visited.add(`${r},${c}`);
-      let openCount = 0;
-
+      const queue = [[startR, startC]];
+      visited.add(`${startR},${startC}`);
       while (queue.length > 0) {
-        const [currR, currC] = queue.shift();
-        openCount++;
-
-        // If we can reach 15 empty tiles, we consider it safely unconfined.
-        if (openCount >= 15) return true;
-
-        const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-        for (const [dr, dc] of dirs) {
-          const nr = currR + dr;
-          const nc = currC + dc;
+        const [r, c] = queue.shift();
+        if (r === goalR && c === goalC) return true;
+        for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+          const nr = r + dr, nc = c + dc;
           if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
             const key = `${nr},${nc}`;
             if (!walls.has(key) && !visited.has(key)) {
@@ -148,25 +117,92 @@
       return false;
     }
 
-    // Iteratively punch holes if start is trapped
-    const startR = Math.floor(rows / 2), startC = 0;
-    let safetyNet = 100;
-    while (!ensureReachable(startR, startC) && safetyNet-- > 0) {
-      // Find a random wall near the start and delete it
-      let r = Math.max(0, startR - 2 + Math.floor(Math.random() * 5));
-      let c = Math.max(0, startC + Math.floor(Math.random() * 4));
-      walls.delete(`${r},${c}`);
+    function generate() {
+      const p = density === 'dense' ? config._dense : config._sparse;
+      const walls = new Set();
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if ((r === startR && c === startC) || (r === goalR && c === goalC)) continue;
+          if (Math.random() < p) walls.add(`${r},${c}`);
+        }
+      }
+      // Clear some obstacles on the middle corridor
+      for (let c = 0; c < cols; c++) {
+        if (Math.random() < config._corr_keep) continue;
+        walls.delete(`${startR},${c}`);
+      }
+
+      // Ensure no column is completely blocked
+      for (let c = 1; c < cols - 1; c++) {
+        let blockedCount = 0;
+        for (let r = 0; r < rows; r++) {
+          if (walls.has(`${r},${c}`)) blockedCount++;
+        }
+        if (blockedCount === rows) {
+          const unblockRow = Math.floor(Math.random() * rows);
+          walls.delete(`${unblockRow},${c}`);
+        }
+      }
+
+      // Ensure start and goal are not confined (can reach ≥15 open tiles each)
+      function ensureReachable(sr, sc) {
+        const visited = new Set();
+        const queue = [[sr, sc]];
+        visited.add(`${sr},${sc}`);
+        let openCount = 0;
+        while (queue.length > 0) {
+          const [currR, currC] = queue.shift();
+          openCount++;
+          if (openCount >= 15) return true;
+          for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+            const nr = currR + dr, nc = currC + dc;
+            if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
+              const key = `${nr},${nc}`;
+              if (!walls.has(key) && !visited.has(key)) {
+                visited.add(key);
+                queue.push([nr, nc]);
+              }
+            }
+          }
+        }
+        return false;
+      }
+
+      let safety = 100;
+      while (!ensureReachable(startR, startC) && safety-- > 0) {
+        let r = clamp(startR - 2 + Math.floor(Math.random() * 5), 0, rows - 1);
+        let c = Math.max(0, startC + Math.floor(Math.random() * 4));
+        walls.delete(`${r},${c}`);
+      }
+      safety = 100;
+      while (!ensureReachable(goalR, goalC) && safety-- > 0) {
+        let r = clamp(goalR - 2 + Math.floor(Math.random() * 5), 0, rows - 1);
+        let c = clamp(goalC - 3 + Math.floor(Math.random() * 4), 0, cols - 1);
+        walls.delete(`${r},${c}`);
+      }
+
+      return walls;
     }
 
-    // Iteratively punch holes if goal is trapped
-    const goalR = Math.floor(rows / 2), goalC = cols - 1;
-    safetyNet = 100;
-    while (!ensureReachable(goalR, goalC) && safetyNet-- > 0) {
-      let r = Math.max(0, goalR - 2 + Math.floor(Math.random() * 5));
-      let c = Math.max(0, goalC - 3 + Math.floor(Math.random() * 4));
-      walls.delete(`${r},${c}`);
+    // Generate maps until we get one with a valid path (up to 10 attempts)
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const walls = generate();
+      if (hasPath(walls)) return walls;
+
+      // No path — punch holes along the middle corridor and retry check
+      for (let c = 0; c < cols; c++) {
+        walls.delete(`${startR},${c}`);
+        if (Math.random() < 0.3 && startR > 0) walls.delete(`${startR - 1},${c}`);
+        if (Math.random() < 0.3 && startR < rows - 1) walls.delete(`${startR + 1},${c}`);
+      }
+      if (hasPath(walls)) return walls;
     }
 
+    // Ultimate fallback: clear the entire middle row
+    const walls = generate();
+    for (let c = 0; c < cols; c++) {
+      walls.delete(`${startR},${c}`);
+    }
     return walls;
   }
 
@@ -317,6 +353,9 @@
 
       if (okSurvey) {
         okSurvey.disabled = true; // Disable until slider is moved
+        if (window.StageHint) {
+          StageHint.bindButton(okSurvey, 'Please adjust the belief slider first.');
+        }
       }
 
       const beliefSliderRef = document.getElementById('beliefSlider');
@@ -554,12 +593,27 @@
               headers: { "Content-Type": "text/plain;charset=utf-8" },
               body: JSON.stringify(payload)
             });
-            if (saveStatus) saveStatus.innerText = "Data saved successfully! You may now close this window.";
+            if (saveStatus) saveStatus.innerText = "Data saved successfully!";
             if (saveStatus) saveStatus.style.color = "var(--success)";
             const waitMsg = document.getElementById('waitMsg');
             if (waitMsg) waitMsg.style.display = 'none';
             const returnBtn = document.getElementById('returnBtn');
             if (returnBtn) returnBtn.setAttribute('style', 'text-decoration:none; display:inline-block !important; margin-top:16px;');
+            // Mark DSB as complete for main menu indicator
+            localStorage.setItem('task_complete_dsb', 'true');
+            // Auto-return to main menu after 5 seconds
+            let countdown = 5;
+            const countdownEl = document.getElementById('autoReturnMsg');
+            if (countdownEl) countdownEl.style.display = 'block';
+            const countdownTimer = setInterval(() => {
+              countdown--;
+              if (countdownEl) countdownEl.innerText = `Returning to main menu in ${countdown}s...`;
+              if (countdown <= 0) {
+                clearInterval(countdownTimer);
+                window.location.href = '../index.html';
+              }
+            }, 1000);
+            if (countdownEl) countdownEl.innerText = `Returning to main menu in ${countdown}s...`;
           } catch (err) {
             console.error(err);
             if (saveStatus) saveStatus.innerText = "Error saving data. Backup saved locally.";
@@ -588,8 +642,147 @@
     gridEl.style.gridTemplateColumns = `repeat(${c}, ${cell}px)`;
   })();
 
+  // Practice Trial Logic
+  async function runPracticeTrial() {
+    if (isRunning) return;
+    isRunning = true;
+    startBtn.disabled = true;
+    startBtn.innerText = 'Practice...';
+
+    const goalRow = Math.floor(config.grid.rows / 2);
+    const goalCol = config.grid.cols - 1;
+
+    // Hardcode a practice map so there's an inescapable wall 
+    // right near the start position, preventing an empty sparse generation.
+    const pWalls = new Set();
+    pWalls.add(`${goalRow},2`);
+    pWalls.add(`${goalRow - 1},2`);
+    pWalls.add(`${goalRow + 1},2`);
+    pWalls.add(`${goalRow - 1},1`);
+    pWalls.add(`${goalRow + 1},1`);
+
+    let pAgent = { r: goalRow, c: 0 };
+    let pBattery = 100; // Force full battery visual
+    render(pAgent, pWalls, pBattery);
+
+    let stage = 1; // 1 = crash, 2 = reach goal
+
+    if (window.dsbTour && window.dsbTour.currentStep === 0) {
+      window.dsbTour.nextStep();
+    }
+
+    let pAwaiting = true;
+    const pAbort = new AbortController();
+
+    function onKeyP(e) {
+      if (!pAwaiting) return;
+      if (e.repeat) return;
+      if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+      e.preventDefault();
+      const mapKey = { 'ArrowUp': 'UP', 'ArrowDown': 'DOWN', 'ArrowLeft': 'LEFT', 'ArrowRight': 'RIGHT' };
+      stepP(mapKey[e.key]);
+    }
+
+    document.addEventListener('keydown', onKeyP, { signal: pAbort.signal });
+
+    function stepP(action) {
+      if (!pAwaiting) return;
+      let dr = 0, dc = 0;
+      if (action === 'UP') dr = -1;
+      if (action === 'DOWN') dr = 1;
+      if (action === 'LEFT') dc = -1;
+      if (action === 'RIGHT') dc = 1;
+
+      const nextR = clamp(pAgent.r + dr, 0, config.grid.rows - 1);
+      const nextC = clamp(pAgent.c + dc, 0, config.grid.cols - 1);
+
+      let collision = false;
+      if (pWalls.has(`${nextR},${nextC}`)) {
+        collision = true;
+      } else {
+        pAgent.r = nextR;
+        pAgent.c = nextC;
+      }
+
+      let drain = config.battery.drain_per_step + (collision ? config.battery.drain_collision_penalty : 0);
+      pBattery = Math.max(30, pBattery - drain); // Don't let them actually die in practice
+
+      if (collision) {
+        gridEl.classList.remove('shake');
+        void gridEl.offsetWidth;
+        gridEl.classList.add('shake');
+        setTimeout(() => gridEl.classList.remove('shake'), 300);
+      }
+
+      render(pAgent, pWalls, pBattery);
+
+      if (stage === 1 && collision) {
+        stage = 2; // Move to stage 2
+        pAwaiting = false; // pause briefly
+        setTimeout(() => {
+          // Teleport near goal
+          pAgent.r = goalRow;
+          pAgent.c = goalCol - 2;
+          render(pAgent, pWalls, pBattery);
+          pAwaiting = true;
+          if (window.dsbTour) window.dsbTour.nextStep(); // Advance "Fly to Goal"
+        }, 800);
+      } else if (stage === 2 && pAgent.r === goalRow && pAgent.c === goalCol) {
+        stage = 3; // Ensure this block only runs exactly once
+        pAwaiting = false;
+        if (pAbort) pAbort.abort();
+
+        // Brute force hide tooltips in case of error
+        const tt = document.querySelector('.tour-tooltip');
+        if (tt) tt.classList.remove('show');
+        const overlay = document.querySelector('.tour-overlay');
+        if (overlay) overlay.style.opacity = '0';
+
+        if (window.dsbTour) window.dsbTour.nextStep(); // Advance to survey
+
+        // Force modal via injected CSS to absolutely guarantee it overrides everything
+        const sModal = document.getElementById('surveyModal');
+        if (sModal) {
+          sModal.setAttribute('style', 'z-index: 100000 !important; visibility: visible !important; opacity: 1 !important; display: flex !important;');
+          sModal.classList.add('active');
+        }
+
+        setTimeout(() => {
+          showSurvey('goal').then(res => {
+            if (window.dsbTour) window.dsbTour.finish(); // End tour
+            // Completely resolve practice logic
+            isRunning = false;
+            startBtn.disabled = true; // wait for real run to enable it or just immediately trigger run
+
+            // Clean up styles
+            if (sModal) sModal.removeAttribute('style');
+            resolveP();
+          });
+        }, 300); // Slight delay to ensure DOM updates and tour transitions finish
+      }
+    }
+
+    let resolveP;
+    const doneP = new Promise(res => { resolveP = res; });
+    await doneP;
+  }
+
   // Buttons
-  startBtn.onclick = () => run();
+  let practiceDone = false;
+  startBtn.onclick = async () => {
+    if (!practiceDone && window.dsbTour) {
+      practiceDone = true;
+      // Start practice mode natively. Make sure real run() is not active.
+      if (isRunning) return;
+      await runPracticeTrial();
+      // After practice, auto-start the real trial!
+      setTimeout(() => {
+        run();
+      }, 500);
+    } else {
+      run();
+    }
+  };
   dlBtn.onclick = () => {
     const blob = new Blob([JSON.stringify(runLog, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);

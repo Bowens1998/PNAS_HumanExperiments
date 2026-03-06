@@ -300,6 +300,7 @@
       ctxUpdates: 0
     };
     tickIdx = 0; done = false;
+    btn.next.disabled = false; // Always re-enable Next Tick at the start of each trial
 
     ctxSlider.value = 0; ctxVal.innerText = '0'; ctxUpdateCount = 0;
     dxList.querySelectorAll('input[name="dx"]').forEach(e => {
@@ -323,12 +324,30 @@
 
     renderPatient(patient, cc, trueDx);
 
+    // Floating hint tooltips for disabled elements
+    if (window.StageHint) {
+      StageHint.bind(ctxSlider, 'Please select a diagnosis first.');
+      StageHint.bindButton(btn.final, 'Please adjust the Contextual Belief slider first.');
+    }
+
     log(`New trial: T=${T} (cap ${cap}), Dx=${trueDx}, Sev=${severity0}, CC=${cc}, age=${patient.age}, comorbid=${JSON.stringify(patient.comorbid)}`);
     stepTick(true);
   }
 
   function stepTick(first = false) {
     if (done) return;
+
+    // Guard: Prevent users from spamming the 'Next Tick' button during the tutorial
+    // which would otherwise end the trial early and force the ESI modal open against the tour flow.
+    if (window.tpbTour && document.querySelector('.tour-overlay')) {
+      if (typeof window.tpbAutoTicks === 'undefined') window.tpbAutoTicks = 0;
+      if (!first && window.tpbAutoTicks >= 3) {
+        console.log('Tutorial limits tick advancement to 3 to prevent early ESI modal conflict.');
+        return; // Silently ignore the click
+      }
+      if (!first) window.tpbAutoTicks++;
+    }
+
     if (!first) {
       const highVol = controls.vol.value === 'high';
       trial.severity = Logic.maybeFlipSeverity(trial.severity, highVol, cfg);
@@ -362,9 +381,14 @@
     }
 
     if (t === trial.T) {
-      R('status').innerText = 'Time limit reached for this case. Please finalize ESI.';
+      R('status').innerText = 'Time limit reached. Please update the Contextual Belief slider, then click Finalize Triage.';
       btn.next.disabled = true;
-      finalizeESIModal();
+      if (window.StageHint) {
+        StageHint.bindButton(btn.next, 'No more ticks available. Please adjust the Contextual Belief slider, then click Finalize Triage.');
+      }
+      // Note: finalizeESIModal() is NOT auto-called here.
+      // The user must drag ctxSlider at least once (handled by unlockFinalize listener in newTrial)
+      // and then click the Finalize button themselves.
     }
   }
 
@@ -459,13 +483,28 @@
           body: JSON.stringify(payload)
         });
         if (saveStatus) {
-          saveStatus.innerText = "Data saved successfully! You may now close this window.";
+          saveStatus.innerText = "Data saved successfully!";
           saveStatus.style.color = "var(--success)";
         }
         const waitMsg = document.getElementById('waitMsg');
         if (waitMsg) waitMsg.style.display = 'none';
         const returnBtn = document.getElementById('returnBtn');
         if (returnBtn) returnBtn.setAttribute('style', 'text-decoration:none; display:inline-block !important; margin-top:16px;');
+        // Mark TPB as complete for main menu indicator
+        localStorage.setItem('task_complete_tpb', 'true');
+        // Auto-return to main menu after 5 seconds
+        let countdown = 5;
+        const countdownEl = document.getElementById('autoReturnMsg');
+        if (countdownEl) countdownEl.style.display = 'block';
+        const countdownTimer = setInterval(() => {
+          countdown--;
+          if (countdownEl) countdownEl.innerText = `Returning to main menu in ${countdown}s...`;
+          if (countdown <= 0) {
+            clearInterval(countdownTimer);
+            window.location.href = '../index.html';
+          }
+        }, 1000);
+        if (countdownEl) countdownEl.innerText = `Returning to main menu in ${countdown}s...`;
       } catch (err) {
         console.error(err);
         if (saveStatus) {

@@ -6,6 +6,7 @@
   <title>Drone Navigation Task</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/tour.css">
   <style>
     :root {
       --primary: #4F46E5;
@@ -268,13 +269,27 @@
 
     .modal-card {
       background: var(--surface);
-      width: 100%;
-      max-width: 500px;
+      width: 90vw;
+      max-width: 1400px;
+      height: 85vh;
+      margin: auto;
       padding: 32px;
       border-radius: var(--radius);
       box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
       transform: translateY(20px);
       transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .tutorial-slide {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .tutorial-slide>div:last-of-type {
+      flex: 1;
     }
 
     .modal-overlay.active .modal-card {
@@ -445,79 +460,97 @@
         </div>
       </div>
     </div>
+    </div>
+
+    <!-- Survey Modal -->
+    <div id="surveyModal" class="modal-overlay">
+      <div class="modal-card">
+        <div class="tutorial-slide" style="display:flex; flex-direction:column; min-height: 350px;">
+          <h2 id="surveyReason" style="font-size: 28px; margin-bottom: 24px; color: var(--primary);">Trial Ended</h2>
+          <p style="font-size: 18px; line-height: 1.6; margin-bottom: 32px;">Please rate your belief about the current
+            flight conditions. How turbulent or risky did this flight feel?</p>
+          <div style="flex:1; display:flex; flex-direction:column; justify-content:center;">
+            <input type="range" id="beliefSlider" min="0" max="100" value="50" style="margin-bottom: 24px;">
+            <div class="survey-labels"
+              style="display:flex; justify-content:space-between; font-size:16px; color:var(--text-muted);">
+              <span>0% (Safe)</span>
+              <span style="font-weight:bold; color:var(--primary); font-size:24px;" id="beliefVal">50</span>
+              <span>100% (Turbulent/Risky)</span>
+            </div>
+          </div>
+          <div style="text-align:right; margin-top:32px;">
+            <button id="okSurvey" class="btn-primary" disabled style="padding: 12px 24px; font-size: 16px;">Confirm
+              Rating</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Task Complete Modal -->
+    <div id="completeModal" class="modal-overlay">
+      <div class="modal-card" style="text-align: center;">
+        <div style="font-size: 48px; margin-bottom: 16px;">🏁</div>
+        <h2>Experiment Complete!</h2>
+        <p>Thank you for completing the Drone Navigation task. Your flight logs have been recorded.</p>
+        <div id="saveStatus" style="font-weight:600; color:var(--primary); margin:24px 0;">Saving to database...</div>
+        <div id="waitMsg" style="color:var(--text-muted); font-size:14px; margin-top:16px;">
+          Please do not close this window until the save is complete.
+        </div>
+        <a href="../index.html" id="returnBtn" style="text-decoration:none; display:none; margin-top:16px;">
+          <button class="btn-secondary">Return to Main Menu</button>
+        </a>
+        <div id="autoReturnMsg" style="display:none; margin-top:12px; color:var(--text-muted); font-size:14px;"></div>
+      </div>
+    </div>
 
   </main>
 
-  <!-- Instructions Modal -->
-  <div id="instructionsModal" class="modal-overlay active">
-    <div class="modal-card">
-      <h2>Welcome to the Drone Navigation Task</h2>
-      <p>Your goal is to safely fly the drone (<span style="color:#FBBF24; font-weight:bold;">yellow square</span>)
-        all the way to the landing pad (<span style="color:#10B981; font-weight:bold;">green square</span>) on the right
-        side.
-      </p>
-
-      <div
-        style="background:var(--background); padding:16px; border-radius:8px; margin-bottom:24px; font-size:14px; line-height:1.6;">
-        <ul style="padding-left:20px; margin:0;">
-          <li>Use the <b>Arrow Keys</b> to move around.</li>
-          <li>Don't crash into the dark gray <b>walls</b>! Hitting them will drain your battery super fast.</li>
-          <li>Watch out for the <b>wind</b>! It might blow your drone off course unexpectedly.</li>
-          <li>Keep an eye on the <b>Battery</b> bar. You have to reach the goal before it runs out!</li>
-        </ul>
-      </div>
-
-      <div style="display:flex; justify-content:flex-end;">
-        <button id="closeInstructionsBtn" class="btn-primary">I Understand, Let's Begin</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Trial Survey Modal -->
-  <div id="surveyModal" class="modal-overlay">
-    <div class="modal-card">
-      <h2 id="surveyReason" style="margin-bottom:8px;">Trial Complete</h2>
-      <p style="margin-bottom:12px;">How dangerous did this specific environment feel to navigate?</p>
-
-      <div style="margin: 24px 0;">
-        <label for="beliefSlider" style="font-weight:600; font-size:14px;">Contextual Belief Risk Score (0-100)</label>
-        <input id="beliefSlider" type="range" min="0" max="100" value="50"
-          oninput="document.getElementById('beliefVal').innerText = this.value">
-        <div class="survey-labels">
-          <span>0 (Completely Safe)</span>
-          <span style="font-weight:bold; color:var(--primary); font-size:16px;" id="beliefVal">50</span>
-          <span>100 (Highly Dangerous)</span>
-        </div>
-      </div>
-
-      <div style="display:flex; gap:12px; justify-content:flex-end;">
-        <button id="okSurvey" class="btn-primary">Submit Rating</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Task Complete Modal -->
-  <div id="completeModal" class="modal-overlay">
-    <div class="modal-card" style="text-align: center;">
-      <div style="font-size: 48px; margin-bottom: 16px;">🎉</div>
-      <h2>Task Complete!</h2>
-      <p>Thank you for participating. Your data is being securely saved.</p>
-      <div id="saveStatus" style="font-weight:600; color:var(--primary); margin:24px 0;">Saving to database...</div>
-      <div id="waitMsg" style="color:var(--text-muted); font-size:14px; margin-top:16px;">
-        Please do not close this window until the save is complete.
-      </div>
-      <a href="../index.html" id="returnBtn" style="text-decoration:none; display:none; margin-top:16px;">
-        <button class="btn-secondary">Return to Main Menu</button>
-      </a>
-    </div>
-  </div>
-
+  <script src="../assets/stage-hint.js"></script>
+  <script src="../assets/tour.js"></script>
   <script src="./js/config.js"></script>
   <script src="./js/driver_layers_v6.js?v=9.0"></script>
   <script>
-    // Handle Instructions Modal
-    document.getElementById('closeInstructionsBtn').addEventListener('click', () => {
-      document.getElementById('instructionsModal').classList.remove('active');
+    // Initialize Tour
+    document.addEventListener("DOMContentLoaded", () => {
+      // The new guided practice tour
+      const steps = [
+        {
+          target: '#startBtn',
+          title: 'Welcome to Drone Navigation',
+          content: 'Click <b>Start Experiment</b> to begin. We will start with a short, hands-on practice flight!',
+          placement: 'bottom',
+          onNext: () => {
+            const btn = document.getElementById('startBtn');
+            if (btn && !btn.disabled) btn.click();
+          }
+        },
+        {
+          target: '#grid',
+          title: 'Practice Flight: Controls & Collision',
+          content: '<b>Move the drone using the Arrow Keys.</b> Every move drains a little battery. <i>Try purposely bumping into a wall</i> (dark squares) to feel the bounce/shake and notice the extra battery drain! (No Next button here, you must crash once to proceed!)',
+          placement: 'bottom',
+          hideNext: true
+        },
+        {
+          target: '#grid',
+          title: 'Practice Flight: Reaching the Goal',
+          content: 'Ouch! Collisions drain a lot of battery. Now, I have teleported you near the exit. <b>Fly right into the green goal square!</b>',
+          placement: 'bottom',
+          hideNext: true
+        },
+        {
+          target: '.survey-labels', // Will point roughly to the slider
+          title: 'Trial Feedback',
+          content: 'Great flying! At the end of each round, we ask you to rate the risk/turbulence. <b>Please drag the slider now to register your feeling</b> and then click <b>Confirm Rating</b>.',
+          placement: 'top',
+          hideNext: true
+        }
+      ];
+
+      window.dsbTour = new TourGuide(steps, () => {
+        console.log("Practice Tour completed");
+      });
+      window.dsbTour.start();
     });
 
     // Wire slider value labels for controls

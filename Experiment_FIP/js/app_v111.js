@@ -367,31 +367,74 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('lockH').disabled = true;
       document.getElementById('submitTrial').disabled = true;
 
-      // Event listeners for unlocking logic
-      const unlockStageB = () => { ctxRisk.disabled = false; };
+      // Abort previous trial's stage-gate listeners to prevent stale closures
+      if (nextTrial._stageAbort) nextTrial._stageAbort.abort();
+      nextTrial._stageAbort = new AbortController();
+      const stageSignal = nextTrial._stageAbort.signal;
+
+      // --- Stage A gate: ALL 3 charts must have trend selected AND confidence adjusted ---
+      const stageADone = {
+        L: { trend: false, conf: false },
+        M: { trend: false, conf: false },
+        H: { trend: false, conf: false }
+      };
+
+      function checkStageAComplete() {
+        return ['L', 'M', 'H'].every(k => stageADone[k].trend && stageADone[k].conf);
+      }
+
+      function tryUnlockStageB() {
+        if (checkStageAComplete()) {
+          ctxRisk.disabled = false;
+        }
+      }
+
+      // Trend radio listeners (per chart)
+      ['L', 'M', 'H'].forEach(k => {
+        const name = 'trend' + k;
+        document.querySelectorAll(`input[name="${name}"]`).forEach(el => {
+          el.addEventListener('change', () => {
+            stageADone[k].trend = true;
+            tryUnlockStageB();
+          }, { signal: stageSignal });
+        });
+      });
+
+      // Confidence slider listeners (per chart)
+      ['L', 'M', 'H'].forEach(k => {
+        const confEl = document.getElementById('conf' + k);
+        if (confEl) {
+          confEl.addEventListener('input', () => {
+            stageADone[k].conf = true;
+            tryUnlockStageB();
+          }, { signal: stageSignal });
+        }
+      });
+
+      // Stage B unlocks Stage C
       const unlockStageC = () => {
         wL.disabled = false; wM.disabled = false; wH.disabled = false;
         document.getElementById('lockL').disabled = false;
         document.getElementById('lockM').disabled = false;
         document.getElementById('lockH').disabled = false;
       };
-      const unlockSubmit = () => { document.getElementById('submitTrial').disabled = false; };
-
-      // Stage A unlocks Stage B
-      ['trendL', 'trendM', 'trendH'].forEach(name => {
-        document.querySelectorAll(`input[name="${name}"]`).forEach(el => {
-          el.addEventListener('change', unlockStageB, { once: true });
-        });
-      });
-      ['confL', 'confM', 'confH'].forEach(id => {
-        document.getElementById(id).addEventListener('input', unlockStageB, { once: true });
-      });
-
-      // Stage B unlocks Stage C
-      ctxRisk.addEventListener('input', unlockStageC, { once: true });
+      ctxRisk.addEventListener('input', unlockStageC, { once: true, signal: stageSignal });
 
       // Stage C unlocks Submit
-      [wL, wM, wH].forEach(el => el.addEventListener('input', unlockSubmit, { once: true }));
+      const unlockSubmit = () => { document.getElementById('submitTrial').disabled = false; };
+      [wL, wM, wH].forEach(el => el.addEventListener('input', unlockSubmit, { once: true, signal: stageSignal }));
+
+      // --- Floating hint tooltips for disabled elements ---
+      if (window.StageHint) {
+        StageHint.bind(ctxRisk, 'Please select a trend and adjust confidence for all 3 charts first.');
+        StageHint.bind(wL, 'Please adjust Market Risk (Stage B) first.');
+        StageHint.bind(wM, 'Please adjust Market Risk (Stage B) first.');
+        StageHint.bind(wH, 'Please adjust Market Risk (Stage B) first.');
+        StageHint.bindButton(document.getElementById('lockL'), 'Please adjust Market Risk (Stage B) first.');
+        StageHint.bindButton(document.getElementById('lockM'), 'Please adjust Market Risk (Stage B) first.');
+        StageHint.bindButton(document.getElementById('lockH'), 'Please adjust Market Risk (Stage B) first.');
+        StageHint.bindButton(document.getElementById('submitTrial'), 'Please adjust Portfolio Allocation (Stage C) first.');
+      }
 
       wL.value = 33; wM.value = 33; wH.value = 34; renderTrial();
 
@@ -443,13 +486,28 @@ document.addEventListener('DOMContentLoaded', () => {
             body: JSON.stringify(payload)
           });
           if (saveStatus) {
-            saveStatus.innerText = "Data saved successfully! You may now close this window.";
+            saveStatus.innerText = "Data saved successfully!";
             saveStatus.style.color = "var(--success)";
           }
           const waitMsg = document.getElementById('waitMsg');
           if (waitMsg) waitMsg.style.display = 'none';
           const returnBtn = document.getElementById('returnBtn');
           if (returnBtn) returnBtn.setAttribute('style', 'text-decoration:none; display:inline-block !important; margin-top:16px;');
+          // Mark FIP as complete for main menu indicator
+          localStorage.setItem('task_complete_fip', 'true');
+          // Auto-return to main menu after 5 seconds
+          let countdown = 5;
+          const countdownEl = document.getElementById('autoReturnMsg');
+          if (countdownEl) countdownEl.style.display = 'block';
+          const countdownTimer = setInterval(() => {
+            countdown--;
+            if (countdownEl) countdownEl.innerText = `Returning to main menu in ${countdown}s...`;
+            if (countdown <= 0) {
+              clearInterval(countdownTimer);
+              window.location.href = '../index.html';
+            }
+          }, 1000);
+          if (countdownEl) countdownEl.innerText = `Returning to main menu in ${countdown}s...`;
         } catch (err) {
           console.error(err);
           if (saveStatus) {

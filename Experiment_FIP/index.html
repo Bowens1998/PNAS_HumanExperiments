@@ -6,6 +6,7 @@
   <title>Financial Investment Task</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/tour.css">
   <style>
     :root {
       --primary: #4F46E5;
@@ -301,13 +302,27 @@
 
     .modal-card {
       background: var(--surface);
-      width: 100%;
-      max-width: 550px;
+      width: 90vw;
+      max-width: 1400px;
+      height: 85vh;
+      margin: auto;
       padding: 32px;
       border-radius: var(--radius);
       box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
       transform: translateY(20px);
       transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .tutorial-slide {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .tutorial-slide>div:last-of-type {
+      flex: 1;
     }
 
     .modal-overlay.active .modal-card {
@@ -496,37 +511,12 @@
     </div>
   </main>
 
-  <!-- Instructions Modal -->
-  <div id="instructionsModal" class="modal-overlay active">
-    <div class="modal-card">
-      <h2>Financial Investment Task</h2>
-      <p>Welcome to the investment simulation! Imagine you are a portfolio manager. You need to look at three different
-        market indices and decide how to invest your money in them.</p>
-
-      <div style="background:var(--background); padding:16px; border-radius:8px; margin-bottom:24px;">
-        <ul style="margin:0;">
-          <li><strong>Stage A:</strong> Look at the charts. The charts show price changes (percentages on the side). The
-            grey line in the middle means 0% (no change). Guess if each index will go Up, Flat, or Down next!</li>
-          <li><strong>Stage B:</strong> How crazy does the market feel right now? Slide the bar to rate it from Calm to
-            Turbulent.</li>
-          <li><strong>Stage C:</strong> Time to invest! Drag the sliders to split your money (100% total) between Low
-            risk,
-            Medium risk, and High risk assets based on your analysis.</li>
-        </ul>
-      </div>
-
-      <div style="display:flex; justify-content:flex-end;">
-        <button id="closeInstructionsBtn" class="btn-primary">I Understand</button>
-      </div>
-    </div>
-  </div>
-
   <!-- Task Complete Modal -->
   <div id="completeModal" class="modal-overlay">
     <div class="modal-card" style="text-align: center;">
-      <div style="font-size: 48px; margin-bottom: 16px;">📈</div>
-      <h2>Portfolios Submitted!</h2>
-      <p>Thank you for participating in the Financial Investment task. Your data is being securely saved.</p>
+      <div style="font-size: 48px; margin-bottom: 16px;">💹</div>
+      <h2>Session Complete!</h2>
+      <p>Thank you for completing the Financial Investment task. Your decisions have been recorded.</p>
       <div id="saveStatus" style="font-weight:600; color:var(--primary); margin:24px 0;">Saving to database...</div>
       <div id="waitMsg" style="color:var(--text-muted); font-size:14px; margin-top:16px;">
         Please do not close this window until the save is complete.
@@ -534,15 +524,122 @@
       <a href="../index.html" id="returnBtn" style="text-decoration:none; display:none; margin-top:16px;">
         <button class="btn-secondary">Return to Main Menu</button>
       </a>
+      <div id="autoReturnMsg" style="display:none; margin-top:12px; color:var(--text-muted); font-size:14px;"></div>
     </div>
   </div>
 
+  <script src="../assets/stage-hint.js"></script>
+  <script src="../assets/tour.js"></script>
   <script src="./js/config.js"></script>
   <script src="./js/app_v111.js"></script>
   <script>
-    // Handle Instructions Modal
-    document.getElementById('closeInstructionsBtn').addEventListener('click', () => {
-      document.getElementById('instructionsModal').classList.remove('active');
+    document.addEventListener("DOMContentLoaded", () => {
+      const steps = [
+        {
+          target: '#startBtn',
+          title: 'Welcome to the Investment Simulator',
+          content: 'Click <b>Start Task</b> to begin your first trial.',
+          placement: 'bottom',
+          onNext: () => {
+            const btn = document.getElementById('startBtn');
+            if (btn && !btn.disabled) btn.click();
+          }
+        },
+        {
+          target: '.asset-block',
+          title: 'Stage A: Predict & Set Confidence',
+          content: 'Now, select whether you think the price will go <b>Up, Flat, or Down</b> next. Then, drag the <b>Confidence slider</b> to indicate how sure you are. Give both a try now!',
+          placement: 'right',
+          onNext: () => {
+            // If none selected, force select 'Up'
+            const inputs = document.querySelectorAll('.radio-row input[type="radio"]');
+            let selected = false;
+            inputs.forEach(i => { if (i.checked) selected = true; });
+            if (!selected && inputs.length > 0) {
+              inputs[0].checked = true;
+              inputs[0].dispatchEvent(new Event('change'));
+              if (typeof evalChoice === 'function') evalChoice(0, 'up');
+            }
+            // Auto-adjust confidence if untouched
+            const el = document.getElementById('confL');
+            if (el && el.value == 50) {
+              el.value = 75;
+              el.dispatchEvent(new Event('input'));
+            }
+          }
+        },
+        {
+          target: '.grid3',
+          title: 'Stage A: Analyze the Charts',
+          content: 'Look at the charts here for all three indices. The central grey line marks 0% (no change). The line graphs show the historical trend over time. **Do not forget to make full decisions for all three!**',
+          placement: 'right'
+        },
+        {
+          target: '.card.panel:nth-of-type(2)', // Stage B panel
+          title: 'Stage B: Assess Market Risk',
+          content: 'How turbulent is the overall market? Drag this slider to indicate your assessment.',
+          placement: 'top',
+          onNext: () => {
+            const el = document.getElementById('ctxRisk');
+            if (el && el.value == 50) {
+              el.value = 65;
+              el.dispatchEvent(new Event('input'));
+            }
+          }
+        },
+        {
+          target: '.card.panel:nth-of-type(3)', // Stage C panel
+          title: 'Stage C: Portfolio Allocation',
+          content: 'Drag the sliders to adjust your allocations. The percentages will automatically balance to 100%.',
+          placement: 'top',
+          onNext: () => {
+            const el = document.getElementById('wL');
+            if (el) {
+              // Force a change to demonstrate functionality
+              el.value = 50;
+              el.dispatchEvent(new Event('input'));
+            }
+          }
+        },
+        {
+          target: '#lockL',
+          title: 'Locking Allocations',
+          content: 'Click the <b>Lock</b> icon (🔓) to fix an allocation percentage. This allows you to freely adjust the other two sliders without changing the locked one!',
+          placement: 'right',
+          onNext: () => {
+            // Let's not auto-lock, it might confuse the final submit state
+          }
+        },
+        {
+          target: '#submitTrial',
+          title: 'Finalize Trial',
+          content: 'Once you are satisfied with all your choices, click here to submit your decisions for this round.',
+          placement: 'top',
+          onNext: () => {
+            // We don't auto-submit the trial just to be safe, or we let them click it manually as the tour finishes.
+          }
+        }
+      ];
+
+      const tour = new TourGuide(steps, () => {
+        console.log("Tour completed. Reloading to clear automated inputs...");
+        // Set flag BEFORE reload so the reloaded page knows to skip tour and auto-start
+        sessionStorage.setItem('fip_tour_seen', 'true');
+        window.location.reload();
+      });
+
+      // Show tour on first visit; after tour completes and reloads, auto-start experiment
+      if (!sessionStorage.getItem('fip_tour_seen')) {
+        tour.start();
+      } else {
+        // Tour was already shown this session — clear the flag for next fresh visit,
+        // then auto-click Start Task to begin the real experiment
+        sessionStorage.removeItem('fip_tour_seen');
+        setTimeout(() => {
+          const btn = document.getElementById('startBtn');
+          if (btn && !btn.disabled) btn.click();
+        }, 500);
+      }
     });
   </script>
 </body>
