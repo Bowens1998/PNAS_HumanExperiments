@@ -389,11 +389,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
-      // Trend radio listeners (per chart)
+      // Trend radio listeners (per chart) — use 'click' not 'change'
+      // so clicking the already-selected "Flat" still counts as user interaction
       ['L', 'M', 'H'].forEach(k => {
         const name = 'trend' + k;
         document.querySelectorAll(`input[name="${name}"]`).forEach(el => {
-          el.addEventListener('change', () => {
+          el.addEventListener('click', () => {
             stageADone[k].trend = true;
             tryUnlockStageB();
           }, { signal: stageSignal });
