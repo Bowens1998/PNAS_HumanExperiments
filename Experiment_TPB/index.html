@@ -539,7 +539,7 @@
   </div>
 
   <script src="../assets/stage-hint.js"></script>
-  <script src="../assets/tour.js"></script>
+  <script src="../assets/tour.js?v=2.0"></script>
   <script src="./js/config.js"></script>
   <script src="./js/driver_tpb_esi_v2_3.js?v=2.3.1"></script>
   <script>
@@ -696,12 +696,22 @@
                 }
               }
 
+              let autoClickTimer = null;
+
+              const startAutoClickCountdown = () => {
+                if (autoClickTimer) clearTimeout(autoClickTimer);
+                autoClickTimer = setTimeout(() => {
+                  if (!nextCardBtn.disabled) nextCardBtn.click();
+                }, 5000);
+              };
+
               const lockNextFor3Seconds = () => {
                 nextCardBtn.disabled = true;
                 nextCardBtn.style.opacity = '0.5';
                 nextCardBtn.style.cursor = 'not-allowed';
                 let timeLeft = 3;
                 nextCardBtn.innerText = `Reading time... (${timeLeft}s)`;
+                if (autoClickTimer) { clearTimeout(autoClickTimer); autoClickTimer = null; }
 
                 timer = setInterval(() => {
                   timeLeft--;
@@ -711,6 +721,7 @@
                     nextCardBtn.style.opacity = '1';
                     nextCardBtn.style.cursor = 'pointer';
                     nextCardBtn.innerText = currentCardIdx === cards.length - 1 ? 'Finish Examples' : 'Next Example ➔';
+                    startAutoClickCountdown(); // 5s auto-click after lock expires
                   } else {
                     nextCardBtn.innerText = `Reading time... (${timeLeft}s)`;
                   }
@@ -735,6 +746,7 @@
                   lockNextFor3Seconds();
                 } else {
                   // Finished all cards! 
+                  if (autoClickTimer) { clearTimeout(autoClickTimer); autoClickTimer = null; }
                   nextCardBtn.style.display = 'none';
                   prevCardBtn.style.display = 'none';
                   cards[currentCardIdx].innerHTML += '<div style="margin-top:20px; color:var(--success); font-weight:bold; font-size:20px;">✓ All examples completed!</div>';
@@ -746,6 +758,8 @@
                     nextBtn.style.opacity = '1';
                     nextBtn.style.cursor = 'pointer';
                     nextBtn.innerText = 'Next Step';
+                    // Auto-click Next Step after 5s
+                    setTimeout(() => { if (nextBtn) nextBtn.click(); }, 5000);
                   }
                 }
               });
@@ -756,17 +770,17 @@
                   if (currentCardIdx > 0) {
                     if (timer) clearInterval(timer);
 
+                    if (autoClickTimer) { clearTimeout(autoClickTimer); autoClickTimer = null; }
                     cards[currentCardIdx].style.display = 'none';
                     currentCardIdx--;
                     cards[currentCardIdx].style.display = 'block';
 
                     updatePrevBtnVisibility();
-                    // If they go back, we don't necessarily need to lock them again, 
-                    // but to keep it simple, we unlock 'next' immediately so they can skip forward.
                     nextCardBtn.disabled = false;
                     nextCardBtn.style.opacity = '1';
                     nextCardBtn.style.cursor = 'pointer';
                     nextCardBtn.innerText = 'Next Example ➔';
+                    startAutoClickCountdown(); // Restart 5s auto-click
                   }
                 });
               }
@@ -854,7 +868,6 @@
           title: 'ESI Levels',
           content: 'You will assign an Emergency Severity Index. Level 1 is the most urgent (immediate life-saving intervention), and Level 5 is the least urgent (stable, no resources needed). Select a level from the dropdown, then click <b>Confirm ESI</b>.',
           placement: 'bottom',
-          skipDelay: true,
           onShow: () => {
             // Open modal automatically to show ESI dropdown during tour
             const modal = document.getElementById('modalBg');
@@ -884,7 +897,7 @@
         sessionStorage.setItem('tpb_tour_seen', 'true');
         // Reload page to reset states
         window.location.reload();
-      });
+      }, { autoAdvanceSec: 5 });
 
       // Show tour on first visit; after tour completes and reloads, auto-start experiment
       if (!sessionStorage.getItem('tpb_tour_seen')) {

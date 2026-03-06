@@ -48,5 +48,14 @@ window.APP_CONFIG = {
         2,
         3
     ],
-    "seed": 42
+    "seed": 42,
+    "timeout": {
+        "trial_wallclock_sec": 60,
+        "idle_sec": 20,
+        "tour_auto_advance_sec": 5,
+        "practice_wallclock_sec": 10,
+        "practice_idle_sec": 10,
+        "survey_wallclock_sec": 10,
+        "survey_idle_sec": 10
+    }
 };

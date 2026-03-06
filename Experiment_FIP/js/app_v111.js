@@ -397,6 +397,7 @@ document.addEventListener('DOMContentLoaded', () => {
           el.addEventListener('click', () => {
             stageADone[k].trend = true;
             tryUnlockStageB();
+            resetFipIdleTimer();
           }, { signal: stageSignal });
         });
       });
@@ -408,6 +409,7 @@ document.addEventListener('DOMContentLoaded', () => {
           confEl.addEventListener('input', () => {
             stageADone[k].conf = true;
             tryUnlockStageB();
+            resetFipIdleTimer();
           }, { signal: stageSignal });
         }
       });
@@ -419,11 +421,11 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('lockM').disabled = false;
         document.getElementById('lockH').disabled = false;
       };
-      ctxRisk.addEventListener('input', unlockStageC, { once: true, signal: stageSignal });
+      ctxRisk.addEventListener('input', () => { unlockStageC(); resetFipIdleTimer(); }, { once: true, signal: stageSignal });
 
       // Stage C unlocks Submit
       const unlockSubmit = () => { document.getElementById('submitTrial').disabled = false; };
-      [wL, wM, wH].forEach(el => el.addEventListener('input', unlockSubmit, { once: true, signal: stageSignal }));
+      [wL, wM, wH].forEach(el => el.addEventListener('input', () => { unlockSubmit(); resetFipIdleTimer(); }, { once: true, signal: stageSignal }));
 
       // --- Floating hint tooltips for disabled elements ---
       if (window.StageHint) {
@@ -441,15 +443,60 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Removed LLM prompt building
       status.textContent = `Trial ${trialIdx + 1} / ${RUN.T_trials}`;
+
+      // ── Trial Timeout (60s wallclock + 20s idle) ──
+      clearFipTimers();
+      fipTrialStart = Date.now();
+      fipIdleLeft = 20;
+
+      fipWallclockTimer = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - fipTrialStart) / 1000);
+        const wRemaining = Math.max(0, 60 - elapsed);
+        status.textContent = `Trial ${trialIdx + 1} / ${RUN.T_trials}  |  ⏱ ${wRemaining}s  |  idle ${fipIdleLeft}s`;
+        if (wRemaining <= 0) autoSubmitFipTrial('timeout_wallclock');
+      }, 1000);
+
+      fipIdleTimer = setTimeout(() => autoSubmitFipTrial('timeout_idle'), 20 * 1000);
+      fipIdleCountdown = setInterval(() => { fipIdleLeft = Math.max(0, fipIdleLeft - 1); }, 1000);
+    }
+
+    // ── FIP timeout helper variables & functions ──
+    let fipWallclockTimer = null, fipIdleTimer = null, fipIdleCountdown = null;
+    let fipTrialStart = 0, fipIdleLeft = 20;
+
+    function clearFipTimers() {
+      if (fipWallclockTimer) { clearInterval(fipWallclockTimer); fipWallclockTimer = null; }
+      if (fipIdleTimer) { clearTimeout(fipIdleTimer); fipIdleTimer = null; }
+      if (fipIdleCountdown) { clearInterval(fipIdleCountdown); fipIdleCountdown = null; }
+    }
+
+    function resetFipIdleTimer() {
+      if (fipIdleTimer) clearTimeout(fipIdleTimer);
+      if (fipIdleCountdown) clearInterval(fipIdleCountdown);
+      fipIdleLeft = 20;
+      fipIdleTimer = setTimeout(() => autoSubmitFipTrial('timeout_idle'), 20 * 1000);
+      fipIdleCountdown = setInterval(() => { fipIdleLeft = Math.max(0, fipIdleLeft - 1); }, 1000);
+    }
+
+    function autoSubmitFipTrial(reason) {
+      clearFipTimers();
+      // Force unlock all stages
+      ctxRisk.disabled = false;
+      wL.disabled = false; wM.disabled = false; wH.disabled = false;
+      document.getElementById('submitTrial').disabled = false;
+      if (trialObj) trialObj.end_reason = reason;
+      endTrial();
     }
 
     async function endTrial() {
+      clearFipTimers();
       const F = factualFromUI();
       const risk = Number(ctxRisk.value);
       let aL = Number(wL.value), aM = Number(wM.value), aH = Number(wH.value);
       let [nL, nM, nH] = normalizeAlloc(aL, aM, aH); // enforce 100%
       const entry = {
         trial: trialIdx,
+        end_reason: (trialObj && trialObj.end_reason) || 'manual',
         params: runtime(),
         prices: trialObj.prices,
         pct: trialObj.pct,

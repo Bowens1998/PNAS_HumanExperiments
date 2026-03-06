@@ -297,7 +297,7 @@
 
     // Disable controls
     startBtn.disabled = true;
-    startBtn.innerText = 'Running...';
+    startBtn.innerText = 'now use your keyboard to move the drone';
     dlBtn.style.display = 'none';
 
     try {
@@ -347,7 +347,13 @@
 
       const reasonEl = document.getElementById('surveyReason');
       if (reasonEl) {
-        reasonEl.innerText = reason === 'goal' ? 'Trial Complete! Goal Reached 🏁' : (reason === 'battery' ? 'Battery Depleted 🔋' : 'Trial Ended');
+        const messages = {
+          goal: 'Trial Complete! Goal Reached 🏁',
+          battery: 'Battery Depleted 🔋',
+          timeout_wallclock: 'Time Limit Reached ⏱️',
+          timeout_idle: 'Idle Timeout — No Input Detected ⏱️'
+        };
+        reasonEl.innerText = messages[reason] || 'Trial Ended';
         reasonEl.style.color = reason === 'goal' ? 'var(--success)' : 'var(--danger)';
       }
 
@@ -372,12 +378,42 @@
         beliefSliderRef.addEventListener('input', () => {
           if (beliefVal) beliefVal.innerText = beliefSliderRef.value;
           if (okSurvey) okSurvey.disabled = false;
+          resetSurveyIdleTimer(); // Reset idle on slider interaction
         }, { signal: beliefSliderAbortController.signal });
       }
 
       const cleanup = () => {
+        clearSurveyTimers();
         surveyModal.classList.remove('active'); // Changed to use classList
       };
+
+      // ── Survey timeout: auto-submit with default value ──
+      const sCfg = defaults.timeout || {};
+      const sWallclockSec = sCfg.survey_wallclock_sec || 10;
+      const sIdleSec = sCfg.survey_idle_sec || 10;
+      let sWallclockTimer = null;
+      let sIdleTimer = null;
+
+      function clearSurveyTimers() {
+        if (sWallclockTimer) { clearTimeout(sWallclockTimer); sWallclockTimer = null; }
+        if (sIdleTimer) { clearTimeout(sIdleTimer); sIdleTimer = null; }
+      }
+
+      function autoSubmitSurvey() {
+        clearSurveyTimers();
+        const val = Number(beliefSliderRef ? beliefSliderRef.value : 50);
+        const result = { context_belief: val, auto_submitted: true };
+        cleanup(); resolve(result);
+      }
+
+      function resetSurveyIdleTimer() {
+        if (sIdleTimer) clearTimeout(sIdleTimer);
+        sIdleTimer = setTimeout(autoSubmitSurvey, sIdleSec * 1000);
+      }
+
+      // Start survey timers
+      sWallclockTimer = setTimeout(autoSubmitSurvey, sWallclockSec * 1000);
+      resetSurveyIdleTimer();
 
       okSurvey.onclick = () => {
         const val = Number(beliefSliderRef ? beliefSliderRef.value : 50);
@@ -434,11 +470,58 @@
     let awaiting = true;
     const trialAbortController = new AbortController();
 
+    // ── Timeout configuration ──
+    const timeoutCfg = defaults.timeout || {};
+    const wallclockSec = timeoutCfg.trial_wallclock_sec || 90;
+    const idleSec = timeoutCfg.idle_sec || 20;
+
+    let wallclockTimer = null;
+    let idleTimer = null;
+    let countdownInterval = null;
+    let trialStartTime = Date.now();
+    let dsbIdleLeft = idleSec;
+
+    // Countdown display on start button
+    function updateCountdown() {
+      const elapsed = (Date.now() - trialStartTime) / 1000;
+      const remaining = Math.max(0, Math.ceil(wallclockSec - elapsed));
+      startBtn.innerText = `⏱ ${remaining}s  |  idle ${dsbIdleLeft}s — use keyboard to move the drone`;
+    }
+
+    // Start wall-clock timer
+    wallclockTimer = setTimeout(() => {
+      if (awaiting) finish('timeout_wallclock');
+    }, wallclockSec * 1000);
+
+    // Start countdown interval (updates every second)
+    updateCountdown();
+    countdownInterval = setInterval(updateCountdown, 1000);
+
+    function resetIdleTimer() {
+      if (idleTimer) clearTimeout(idleTimer);
+      dsbIdleLeft = idleSec;
+      idleTimer = setTimeout(() => {
+        if (awaiting) finish('timeout_idle');
+      }, idleSec * 1000);
+    }
+    resetIdleTimer(); // Start initial idle timer
+    // Idle countdown display
+    let dsbIdleCountdown = setInterval(() => { dsbIdleLeft = Math.max(0, dsbIdleLeft - 1); }, 1000);
+
+    // Helper to clear all timers
+    function clearAllTimers() {
+      if (wallclockTimer) { clearTimeout(wallclockTimer); wallclockTimer = null; }
+      if (idleTimer) { clearTimeout(idleTimer); idleTimer = null; }
+      if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; }
+      if (dsbIdleCountdown) { clearInterval(dsbIdleCountdown); dsbIdleCountdown = null; }
+    }
+
     const onKey = (e) => {
       if (mode !== 'human' || !awaiting) return;
       if (e.repeat) return; // Ignore if the key is being held down
       if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
       e.preventDefault();
+      resetIdleTimer(); // Reset idle timer on each valid key press
       const mapKey = { 'ArrowUp': 'UP', 'ArrowDown': 'DOWN', 'ArrowLeft': 'LEFT', 'ArrowRight': 'RIGHT' };
       stepOnce(mapKey[e.key], '');
     };
@@ -554,8 +637,10 @@
     function finish(why) {
       if (!awaiting) return; // Already finished
       awaiting = false;
+      clearAllTimers(); // Clean up all timeout/idle timers
       trialAbortController.abort(); // Destroy the keydown listener
       trialLog.end_reason = why;
+      trialLog.elapsed_sec = parseFloat(((Date.now() - trialStartTime) / 1000).toFixed(1));
       runLog.trials.push(trialLog);
 
       // Auto-save to localStorage
@@ -674,11 +759,100 @@
     let pAwaiting = true;
     const pAbort = new AbortController();
 
+    // ── Practice timeouts ──
+    const pTimeoutCfg = defaults.timeout || {};
+    const pWallclockSec = pTimeoutCfg.practice_wallclock_sec || 10;
+    const pIdleSec = pTimeoutCfg.practice_idle_sec || 10;
+    let pWallclockTimer = null;
+    let pIdleTimer = null;
+
+    function clearPracticeTimers() {
+      if (pWallclockTimer) { clearTimeout(pWallclockTimer); pWallclockTimer = null; }
+      if (pIdleTimer) { clearTimeout(pIdleTimer); pIdleTimer = null; }
+    }
+
+    function resetPracticeIdleTimer() {
+      if (pIdleTimer) clearTimeout(pIdleTimer);
+      pIdleTimer = setTimeout(() => {
+        if (pAwaiting) autoAdvancePractice();
+      }, pIdleSec * 1000);
+    }
+
+    function startPracticeWallclock() {
+      if (pWallclockTimer) clearTimeout(pWallclockTimer);
+      pWallclockTimer = setTimeout(() => {
+        if (pAwaiting) autoAdvancePractice();
+      }, pWallclockSec * 1000);
+      resetPracticeIdleTimer();
+    }
+
+    function autoAdvancePractice() {
+      if (!pAwaiting) return;
+      clearPracticeTimers();
+
+      if (stage === 1) {
+        // Auto-simulate a collision to advance to stage 2
+        stage = 2;
+        pAwaiting = false;
+        gridEl.classList.remove('shake');
+        void gridEl.offsetWidth;
+        gridEl.classList.add('shake');
+        setTimeout(() => gridEl.classList.remove('shake'), 300);
+
+        setTimeout(() => {
+          pAgent.r = goalRow;
+          pAgent.c = goalCol - 2;
+          render(pAgent, pWalls, pBattery);
+          pAwaiting = true;
+          if (window.dsbTour) window.dsbTour.nextStep();
+          startPracticeWallclock(); // Restart timers for stage 2
+        }, 800);
+      } else if (stage === 2) {
+        // Auto-teleport to goal to advance to stage 3
+        pAgent.r = goalRow;
+        pAgent.c = goalCol;
+        render(pAgent, pWalls, pBattery);
+        // Trigger goal logic
+        stepP('RIGHT'); // This will detect goal and trigger stage 3
+        // If stepP didn't fire (already at goal), force it:
+        if (stage === 2) {
+          stage = 3;
+          pAwaiting = false;
+          if (pAbort) pAbort.abort();
+
+          const tt = document.querySelector('.tour-tooltip');
+          if (tt) tt.classList.remove('show');
+          const overlay = document.querySelector('.tour-overlay');
+          if (overlay) overlay.style.opacity = '0';
+          if (window.dsbTour) window.dsbTour.nextStep();
+
+          const sModal = document.getElementById('surveyModal');
+          if (sModal) {
+            sModal.setAttribute('style', 'z-index: 100000 !important; visibility: visible !important; opacity: 1 !important; display: flex !important;');
+            sModal.classList.add('active');
+          }
+          setTimeout(() => {
+            showSurvey('goal').then(res => {
+              if (window.dsbTour) window.dsbTour.finish();
+              isRunning = false;
+              startBtn.disabled = true;
+              if (sModal) sModal.removeAttribute('style');
+              resolveP();
+            });
+          }, 300);
+        }
+      }
+    }
+
+    // Start practice timers for stage 1
+    startPracticeWallclock();
+
     function onKeyP(e) {
       if (!pAwaiting) return;
       if (e.repeat) return;
       if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
       e.preventDefault();
+      resetPracticeIdleTimer(); // Reset idle on key press
       const mapKey = { 'ArrowUp': 'UP', 'ArrowDown': 'DOWN', 'ArrowLeft': 'LEFT', 'ArrowRight': 'RIGHT' };
       stepP(mapKey[e.key]);
     }
@@ -719,6 +893,7 @@
       if (stage === 1 && collision) {
         stage = 2; // Move to stage 2
         pAwaiting = false; // pause briefly
+        clearPracticeTimers();
         setTimeout(() => {
           // Teleport near goal
           pAgent.r = goalRow;
@@ -726,10 +901,12 @@
           render(pAgent, pWalls, pBattery);
           pAwaiting = true;
           if (window.dsbTour) window.dsbTour.nextStep(); // Advance "Fly to Goal"
+          startPracticeWallclock(); // Restart timers for stage 2
         }, 800);
       } else if (stage === 2 && pAgent.r === goalRow && pAgent.c === goalCol) {
         stage = 3; // Ensure this block only runs exactly once
         pAwaiting = false;
+        clearPracticeTimers();
         if (pAbort) pAbort.abort();
 
         // Brute force hide tooltips in case of error

@@ -274,6 +274,11 @@
             <a href="https://www.prolific.com/" style="color:#065F46;">Click here if not redirected automatically</a>
         </div>
 
+        <div id="autoRedirectMsg"
+            style="display:none; margin-top:24px; padding:16px 20px; background:#EEF2FF; border:2px solid var(--primary); border-radius:var(--radius-md); color:var(--primary); font-weight:600; font-size:15px; animation:fadeIn 0.5s ease-out;">
+            ⏳ Auto-starting next task in <span id="autoRedirectCountdown">10</span>s…
+        </div>
+
         <div class="footer">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -288,13 +293,14 @@
     <script>
         (function () {
             const tasks = [
-                { key: 'task_complete_dsb', cardId: 'card-dsb', checkId: 'check-dsb' },
-                { key: 'task_complete_fip', cardId: 'card-fip', checkId: 'check-fip' },
-                { key: 'task_complete_tpb', cardId: 'card-tpb', checkId: 'check-tpb' },
+                { key: 'task_complete_dsb', cardId: 'card-dsb', checkId: 'check-dsb', href: 'Experiment_DSB/index.html' },
+                { key: 'task_complete_fip', cardId: 'card-fip', checkId: 'check-fip', href: 'Experiment_FIP/index.html' },
+                { key: 'task_complete_tpb', cardId: 'card-tpb', checkId: 'check-tpb', href: 'Experiment_TPB/index.html' },
             ];
 
             let allDone = true;
-            tasks.forEach(({ key, cardId, checkId }) => {
+            let firstIncomplete = null;
+            tasks.forEach(({ key, cardId, checkId, href }) => {
                 const done = localStorage.getItem(key) === 'true';
                 if (done) {
                     const card = document.getElementById(cardId);
@@ -303,6 +309,7 @@
                     if (check) { check.classList.add('done'); check.textContent = '✓'; }
                 } else {
                     allDone = false;
+                    if (!firstIncomplete) firstIncomplete = { cardId, href };
                 }
             });
 
@@ -317,6 +324,26 @@
                     if (sec <= 0) {
                         clearInterval(timer);
                         window.location.href = 'https://www.prolific.com/';
+                    }
+                }, 1000);
+            } else if (firstIncomplete) {
+                // Auto-redirect to first incomplete experiment after 10 seconds
+                const autoMsg = document.getElementById('autoRedirectMsg');
+                const countdownSpan = document.getElementById('autoRedirectCountdown');
+                if (autoMsg) autoMsg.style.display = 'block';
+
+                // Highlight the target card
+                const targetCard = document.getElementById(firstIncomplete.cardId);
+                if (targetCard) targetCard.style.borderColor = 'var(--primary)';
+
+                let sec = 10;
+                if (countdownSpan) countdownSpan.textContent = sec;
+                const timer = setInterval(() => {
+                    sec--;
+                    if (countdownSpan) countdownSpan.textContent = sec;
+                    if (sec <= 0) {
+                        clearInterval(timer);
+                        window.location.href = firstIncomplete.href;
                     }
                 }, 1000);
             }

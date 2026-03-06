@@ -506,7 +506,7 @@
   </main>
 
   <script src="../assets/stage-hint.js"></script>
-  <script src="../assets/tour.js"></script>
+  <script src="../assets/tour.js?v=2.0"></script>
   <script src="./js/config.js"></script>
   <script src="./js/driver_layers_v6.js?v=9.0"></script>
   <script>
@@ -547,9 +547,10 @@
         }
       ];
 
+      const tourTimeout = (window.APP_CONFIG && window.APP_CONFIG.timeout) || {};
       window.dsbTour = new TourGuide(steps, () => {
         console.log("Practice Tour completed");
-      });
+      }, { autoAdvanceSec: tourTimeout.tour_auto_advance_sec || 15 });
       window.dsbTour.start();
     });
 

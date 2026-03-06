@@ -529,7 +529,7 @@
   </div>
 
   <script src="../assets/stage-hint.js"></script>
-  <script src="../assets/tour.js"></script>
+  <script src="../assets/tour.js?v=2.0"></script>
   <script src="./js/config.js"></script>
   <script src="./js/app_v111.js"></script>
   <script>
@@ -626,7 +626,7 @@
         // Set flag BEFORE reload so the reloaded page knows to skip tour and auto-start
         sessionStorage.setItem('fip_tour_seen', 'true');
         window.location.reload();
-      });
+      }, { autoAdvanceSec: 5 });
 
       // Show tour on first visit; after tour completes and reloads, auto-start experiment
       if (!sessionStorage.getItem('fip_tour_seen')) {

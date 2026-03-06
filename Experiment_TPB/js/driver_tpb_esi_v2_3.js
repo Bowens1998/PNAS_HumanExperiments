@@ -196,6 +196,7 @@
       const s = trial.steps[trial.steps.length - 1];
       s.BC_updates.push({ tick: s.tick, ctx: Number(ctxSlider.value) });
       ctxUpdateCount += 1;
+      if (typeof resetTpbIdleTimer === 'function') resetTpbIdleTimer();
     }
   });
 
@@ -315,7 +316,10 @@
     // Stage A (Dx Select) unlocks Stage B (Ctx Slider)
     const unlockStageB = () => { ctxSlider.disabled = false; };
     dxList.querySelectorAll('input[name="dx"]').forEach(el => {
-      el.addEventListener('change', unlockStageB, { once: true });
+      el.addEventListener('change', () => {
+        unlockStageB();
+        if (typeof resetTpbIdleTimer === 'function') resetTpbIdleTimer();
+      }, { once: true });
     });
 
     // Stage B (Ctx Slider) unlocks Finalize button
@@ -332,6 +336,73 @@
 
     log(`New trial: T=${T} (cap ${cap}), Dx=${trueDx}, Sev=${severity0}, CC=${cc}, age=${patient.age}, comorbid=${JSON.stringify(patient.comorbid)}`);
     stepTick(true);
+
+    // ── Trial Timeout (60s wallclock + 20s idle) ──
+    clearTpbTimers();
+    tpbTrialStart = Date.now();
+    tpbIdleLeft = 20;
+
+    tpbWallclockTimer = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - tpbTrialStart) / 1000);
+      const wRemaining = Math.max(0, 60 - elapsed);
+      R('status').innerText = `Trial — ⏱ ${wRemaining}s  |  idle ${tpbIdleLeft}s`;
+      if (wRemaining <= 0) autoFinalizeTpbTrial('timeout_wallclock');
+    }, 1000);
+
+    tpbIdleTimer = setTimeout(() => autoFinalizeTpbTrial('timeout_idle'), 20 * 1000);
+    tpbIdleCountdown = setInterval(() => { tpbIdleLeft = Math.max(0, tpbIdleLeft - 1); }, 1000);
+  }
+
+  // ── TPB timeout helper variables & functions ──
+  let tpbWallclockTimer = null, tpbIdleTimer = null, tpbIdleCountdown = null;
+  let tpbTrialStart = 0, tpbIdleLeft = 20;
+
+  function clearTpbTimers() {
+    if (tpbWallclockTimer) { clearInterval(tpbWallclockTimer); tpbWallclockTimer = null; }
+    if (tpbIdleTimer) { clearTimeout(tpbIdleTimer); tpbIdleTimer = null; }
+    if (tpbIdleCountdown) { clearInterval(tpbIdleCountdown); tpbIdleCountdown = null; }
+  }
+
+  function resetTpbIdleTimer() {
+    if (tpbIdleTimer) clearTimeout(tpbIdleTimer);
+    if (tpbIdleCountdown) clearInterval(tpbIdleCountdown);
+    tpbIdleLeft = 20;
+    tpbIdleTimer = setTimeout(() => autoFinalizeTpbTrial('timeout_idle'), 20 * 1000);
+    tpbIdleCountdown = setInterval(() => { tpbIdleLeft = Math.max(0, tpbIdleLeft - 1); }, 1000);
+  }
+
+  function autoFinalizeTpbTrial(reason) {
+    clearTpbTimers();
+    if (done) return;
+    // Force unlock all stages
+    ctxSlider.disabled = false;
+    btn.final.disabled = false;
+    btn.next.disabled = true;
+    // Record reason
+    trial.end_reason = reason;
+    // Auto-confirm ESI with current/default value
+    done = true;
+    const curr = trial.steps[trial.steps.length - 1];
+    curr.BF_dx = getSelectedDx() || curr.BF_dx;
+    curr.BC_updates.push({ tick: curr.tick, ctx: Number(ctxSlider.value) });
+    const lvl = Math.max(1, Math.min(5, Number(esiSelect.value)));
+    trial.finalized = { ESI: lvl, ctxUpdates: ctxUpdateCount, auto_finalized: true, reason };
+    log(`Auto-finalized ESI=${lvl} (${reason})`);
+    R('status').innerText = `Auto-finalized ESI=${lvl} (${reason}).`;
+    if (!runLog) runLog = { session: cfg.session, mode, trials: [], controls: {} };
+    runLog.trials.push(trial);
+    updateProgress();
+    closeModal();
+
+    const target = Number(controls.trials?.value) || cfg.trials_per_block;
+    if (runLog.trials.length < target) {
+      newTrial();
+    } else {
+      btn.next.disabled = true; btn.final.disabled = true; btn.restart.disabled = true;
+      R('status').innerText = `All ${target} trials complete! Thank you.`;
+      // Trigger the same completion flow as confirmESI
+      finishAllTrials();
+    }
   }
 
   function stepTick(first = false) {
@@ -351,6 +422,7 @@
     if (!first) {
       const highVol = controls.vol.value === 'high';
       trial.severity = Logic.maybeFlipSeverity(trial.severity, highVol, cfg);
+      resetTpbIdleTimer(); // User interacted
     }
     const highNoise = controls.noise.value === 'high';
     const vitals = Logic.vitalsFromDx(trial.trueDx, trial.severity, trial.patient.comorbid, highNoise, cfg);
@@ -394,6 +466,7 @@
 
   function finalizeESIModal() {
     if (done) return;
+    resetTpbIdleTimer(); // User interacted
     ctxReqHint.style.display = (ctxUpdateCount < cfg.ctx.min_required_updates) ? 'block' : 'none';
     openModal();
   }
@@ -431,6 +504,7 @@
 
   confirmESI.onclick = async () => {
     if (done) return;
+    clearTpbTimers();
     const selectedEsi = esiSelect.value;
     if (!selectedEsi) {
       alert("Please select an ESI level before submitting.");
@@ -443,6 +517,7 @@
 
     const lvl = Math.max(1, Math.min(5, Number(selectedEsi)));
     trial.finalized = { ESI: lvl, ctxUpdates: ctxUpdateCount };
+    trial.end_reason = trial.end_reason || 'manual';
     log(`Finalized ESI=${lvl} (ctx updates=${ctxUpdateCount})`);
     R('status').innerText = `Finalized ESI=${lvl}.`;
 
@@ -463,59 +538,64 @@
       btn.final.disabled = true;
       btn.restart.disabled = true;
       R('status').innerText = `All ${target} trials complete! Thank you.`;
-
-      // Show Task Complete Modal
-      const completeModal = document.getElementById('completeModal');
-      const saveStatus = document.getElementById('saveStatus');
-      if (completeModal) completeModal.classList.add('active');
-
-      // Auto-submit to Webhook
-      try {
-        const payload = {
-          experimentId: "TPB",
-          timestamp: new Date().toLocaleString() + ' ' + Intl.DateTimeFormat().resolvedOptions().timeZone,
-          data: JSON.stringify(runLog)
-        };
-        await fetch(WEBHOOK_URL, {
-          method: "POST",
-          mode: "no-cors",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify(payload)
-        });
-        if (saveStatus) {
-          saveStatus.innerText = "Data saved successfully!";
-          saveStatus.style.color = "var(--success)";
-        }
-        const waitMsg = document.getElementById('waitMsg');
-        if (waitMsg) waitMsg.style.display = 'none';
-        const returnBtn = document.getElementById('returnBtn');
-        if (returnBtn) returnBtn.setAttribute('style', 'text-decoration:none; display:inline-block !important; margin-top:16px;');
-        // Mark TPB as complete for main menu indicator
-        localStorage.setItem('task_complete_tpb', 'true');
-        // Auto-return to main menu after 5 seconds
-        let countdown = 5;
-        const countdownEl = document.getElementById('autoReturnMsg');
-        if (countdownEl) countdownEl.style.display = 'block';
-        const countdownTimer = setInterval(() => {
-          countdown--;
-          if (countdownEl) countdownEl.innerText = `Returning to main menu in ${countdown}s...`;
-          if (countdown <= 0) {
-            clearInterval(countdownTimer);
-            window.location.href = '../index.html';
-          }
-        }, 1000);
-        if (countdownEl) countdownEl.innerText = `Returning to main menu in ${countdown}s...`;
-      } catch (err) {
-        console.error(err);
-        if (saveStatus) {
-          saveStatus.innerText = "Error saving data. Backup saved locally.";
-          saveStatus.style.color = "var(--danger)";
-        }
-        btn.dl.style.display = 'inline-block';
-        btn.dl.disabled = false;
-      }
+      finishAllTrials();
     }
   };
+
+  async function finishAllTrials() {
+    const target = Number(controls.trials?.value) || cfg.trials_per_block;
+
+    // Show Task Complete Modal
+    const completeModal = document.getElementById('completeModal');
+    const saveStatus = document.getElementById('saveStatus');
+    if (completeModal) completeModal.classList.add('active');
+
+    // Auto-submit to Webhook
+    try {
+      const payload = {
+        experimentId: "TPB",
+        timestamp: new Date().toLocaleString() + ' ' + Intl.DateTimeFormat().resolvedOptions().timeZone,
+        data: JSON.stringify(runLog)
+      };
+      await fetch(WEBHOOK_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+      });
+      if (saveStatus) {
+        saveStatus.innerText = "Data saved successfully!";
+        saveStatus.style.color = "var(--success)";
+      }
+      const waitMsg = document.getElementById('waitMsg');
+      if (waitMsg) waitMsg.style.display = 'none';
+      const returnBtn = document.getElementById('returnBtn');
+      if (returnBtn) returnBtn.setAttribute('style', 'text-decoration:none; display:inline-block !important; margin-top:16px;');
+      // Mark TPB as complete for main menu indicator
+      localStorage.setItem('task_complete_tpb', 'true');
+      // Auto-return to main menu after 5 seconds
+      let countdown = 5;
+      const countdownEl = document.getElementById('autoReturnMsg');
+      if (countdownEl) countdownEl.style.display = 'block';
+      const countdownTimer = setInterval(() => {
+        countdown--;
+        if (countdownEl) countdownEl.innerText = `Returning to main menu in ${countdown}s...`;
+        if (countdown <= 0) {
+          clearInterval(countdownTimer);
+          window.location.href = '../index.html';
+        }
+      }, 1000);
+      if (countdownEl) countdownEl.innerText = `Returning to main menu in ${countdown}s...`;
+    } catch (err) {
+      console.error(err);
+      if (saveStatus) {
+        saveStatus.innerText = "Error saving data. Backup saved locally.";
+        saveStatus.style.color = "var(--danger)";
+      }
+      btn.dl.style.display = 'inline-block';
+      btn.dl.disabled = false;
+    }
+  }
 
   // Note: submitAllBtn logic removed inside html and js as auto-submit handles payload delivery.
 

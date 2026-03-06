@@ -1,7 +1,7 @@
 // tour.js
 
 class TourGuide {
-    constructor(steps, onComplete = null) {
+    constructor(steps, onComplete = null, options = {}) {
         this.steps = steps;
         this.currentStep = 0;
         this.overlay = null;
@@ -9,6 +9,8 @@ class TourGuide {
         this.targetElement = null;
         this.timer = null;
         this.onComplete = onComplete; // Callback after tour finishes
+        this.autoAdvanceSec = options.autoAdvanceSec || 0; // 0 = disabled
+        this._autoAdvanceTimer = null;
     }
 
     start() {
@@ -42,7 +44,19 @@ class TourGuide {
             this._stepCountdown = null;
         }
 
+        // Clear and restart auto-advance timer
+        if (this._autoAdvanceTimer) {
+            clearTimeout(this._autoAdvanceTimer);
+            this._autoAdvanceTimer = null;
+        }
+
         const step = this.steps[this.currentStep];
+
+        if (this.autoAdvanceSec > 0 && !step.skipDelay && !step.hideNext) {
+            this._autoAdvanceTimer = setTimeout(() => {
+                this.nextStep();
+            }, this.autoAdvanceSec * 1000);
+        }
 
         if (this.targetElement) {
             this.targetElement.classList.remove('tour-highlight');
@@ -200,6 +214,7 @@ class TourGuide {
 
     nextStep() {
         if (this._isTransitioning) return;
+        if (this._autoAdvanceTimer) { clearTimeout(this._autoAdvanceTimer); this._autoAdvanceTimer = null; }
         this._isTransitioning = true;
 
         const step = this.steps[this.currentStep];
@@ -234,6 +249,7 @@ class TourGuide {
         this._isFinished = true;
         this._isTransitioning = false;
         clearInterval(this.timer);
+        if (this._autoAdvanceTimer) { clearTimeout(this._autoAdvanceTimer); this._autoAdvanceTimer = null; }
         this.overlay.style.opacity = '0';
         this.tooltip.style.opacity = '0';
 
