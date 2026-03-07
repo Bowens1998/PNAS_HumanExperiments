@@ -271,7 +271,8 @@
         <div id="allDoneMsg">
             ✅ All tasks complete! Redirecting to Prolific in <span id="prolificCountdown">5</span>s…
             <br><br>
-            <a href="https://www.prolific.com/" style="color:#065F46;">Click here if not redirected automatically</a>
+            <a href="https://app.prolific.com/submissions/complete?cc=CMRMYHFS" style="color:#065F46;">Click here if not
+                redirected automatically</a>
         </div>
 
         <div id="autoRedirectMsg"
@@ -323,7 +324,7 @@
                     if (countdownEl) countdownEl.textContent = sec;
                     if (sec <= 0) {
                         clearInterval(timer);
-                        window.location.href = 'https://www.prolific.com/';
+                        window.location.href = 'https://app.prolific.com/submissions/complete?cc=CMRMYHFS';
                     }
                 }, 1000);
             } else if (firstIncomplete) {
