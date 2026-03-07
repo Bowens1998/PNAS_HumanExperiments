@@ -269,7 +269,7 @@
         </div>
 
         <div id="allDoneMsg">
-            ✅ All tasks complete! Redirecting to Prolific in <span id="prolificCountdown">5</span>s…
+            ✅ All tasks complete! Redirecting to Prolific in <span id="prolificCountdown">3</span>s…
             <br><br>
             <a href="https://app.prolific.com/submissions/complete?cc=CMRMYHFS" style="color:#065F46;">Click here if not
                 redirected automatically</a>
@@ -317,7 +317,7 @@
             if (allDone) {
                 const banner = document.getElementById('allDoneMsg');
                 if (banner) banner.style.display = 'block';
-                let sec = 5;
+                let sec = 3;
                 const countdownEl = document.getElementById('prolificCountdown');
                 const timer = setInterval(() => {
                     sec--;
