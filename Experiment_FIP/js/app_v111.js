@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const $ = (id) => document.getElementById(id);
   const status = $('status'), errBox = $('error');
   const startBtn = $('startBtn'), dlBtn = $('downloadBtn');
-  let WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbzyZHP0KBEsq0hnyFrE8sWIVuZFFHIbhvngklXmiAojQa_y6ZYbiL9bjZQmGJXV2yXK/exec";
+  // WEBHOOK_URL removed — data is saved to localStorage and submitted from main menu.
 
   let secretCode = "whosyourdaddy";
   let keysPressed = "";
@@ -520,19 +520,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const saveStatus = document.getElementById('saveStatus');
         if (completeModal) completeModal.classList.add('active');
 
-        // Auto-submit to Webhook
+        // Save data to localStorage (unified submission happens on main menu)
         try {
-          const payload = {
-            experimentId: "FIP",
-            timestamp: new Date().toLocaleString() + ' ' + Intl.DateTimeFormat().resolvedOptions().timeZone,
-            data: JSON.stringify(LOG)
-          };
-          await fetch(WEBHOOK_URL, {
-            method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "text/plain;charset=utf-8" },
-            body: JSON.stringify(payload)
-          });
+          // Add subject ID to the log
+          LOG.subjectId = window.SUBJECT_ID || 'unknown';
+          localStorage.setItem('experiment_data_fip', JSON.stringify(LOG));
+          // Mark FIP as complete for main menu indicator
+          localStorage.setItem('task_complete_fip', 'true');
+
           if (saveStatus) {
             saveStatus.innerText = "Data saved successfully!";
             saveStatus.style.color = "var(--success)";
@@ -541,8 +536,6 @@ document.addEventListener('DOMContentLoaded', () => {
           if (waitMsg) waitMsg.style.display = 'none';
           const returnBtn = document.getElementById('returnBtn');
           if (returnBtn) returnBtn.setAttribute('style', 'text-decoration:none; display:inline-block !important; margin-top:16px;');
-          // Mark FIP as complete for main menu indicator
-          localStorage.setItem('task_complete_fip', 'true');
           // Auto-return to main menu after 5 seconds
           let countdown = 5;
           const countdownEl = document.getElementById('autoReturnMsg');

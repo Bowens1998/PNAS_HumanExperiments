@@ -10,7 +10,7 @@
   function rmClass(el, c) { el.classList.remove(c); }
 
   // Setup webhook url and cheat code listener
-  let WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbzyZHP0KBEsq0hnyFrE8sWIVuZFFHIbhvngklXmiAojQa_y6ZYbiL9bjZQmGJXV2yXK/exec";
+  // WEBHOOK_URL removed — data is saved to localStorage and submitted from main menu.
   const secretCode = "whosyourdaddy";
   let keysPressed = "";
 
@@ -550,19 +550,14 @@
     const saveStatus = document.getElementById('saveStatus');
     if (completeModal) completeModal.classList.add('active');
 
-    // Auto-submit to Webhook
+    // Save data to localStorage (unified submission happens on main menu)
     try {
-      const payload = {
-        experimentId: "TPB",
-        timestamp: new Date().toLocaleString() + ' ' + Intl.DateTimeFormat().resolvedOptions().timeZone,
-        data: JSON.stringify(runLog)
-      };
-      await fetch(WEBHOOK_URL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(payload)
-      });
+      // Add subject ID to the run log
+      runLog.subjectId = window.SUBJECT_ID || 'unknown';
+      localStorage.setItem('experiment_data_tpb', JSON.stringify(runLog));
+      // Mark TPB as complete for main menu indicator
+      localStorage.setItem('task_complete_tpb', 'true');
+
       if (saveStatus) {
         saveStatus.innerText = "Data saved successfully!";
         saveStatus.style.color = "var(--success)";
@@ -571,8 +566,6 @@
       if (waitMsg) waitMsg.style.display = 'none';
       const returnBtn = document.getElementById('returnBtn');
       if (returnBtn) returnBtn.setAttribute('style', 'text-decoration:none; display:inline-block !important; margin-top:16px;');
-      // Mark TPB as complete for main menu indicator
-      localStorage.setItem('task_complete_tpb', 'true');
       // Auto-return to main menu after 5 seconds
       let countdown = 5;
       const countdownEl = document.getElementById('autoReturnMsg');

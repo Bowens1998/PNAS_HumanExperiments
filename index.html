@@ -291,8 +291,11 @@
         </div>
     </div>
 
+    <script src="assets/subject-id.js"></script>
     <script>
         (function () {
+            const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbzyZHP0KBEsq0hnyFrE8sWIVuZFFHIbhvngklXmiAojQa_y6ZYbiL9bjZQmGJXV2yXK/exec";
+
             const tasks = [
                 { key: 'task_complete_dsb', cardId: 'card-dsb', checkId: 'check-dsb', href: 'Experiment_DSB/index.html' },
                 { key: 'task_complete_fip', cardId: 'card-fip', checkId: 'check-fip', href: 'Experiment_FIP/index.html' },
@@ -315,18 +318,62 @@
             });
 
             if (allDone) {
+                // All three experiments done — package and submit unified data
                 const banner = document.getElementById('allDoneMsg');
-                if (banner) banner.style.display = 'block';
-                let sec = 3;
-                const countdownEl = document.getElementById('prolificCountdown');
-                const timer = setInterval(() => {
-                    sec--;
-                    if (countdownEl) countdownEl.textContent = sec;
-                    if (sec <= 0) {
-                        clearInterval(timer);
-                        window.location.href = 'https://app.prolific.com/submissions/complete?cc=CMRMYHFS';
+                if (banner) {
+                    banner.style.display = 'block';
+                    banner.innerHTML = '⏳ All tasks complete! Submitting data…';
+                }
+
+                // Build unified payload
+                const subjectId = window.SUBJECT_ID || localStorage.getItem('subject_id') || 'unknown';
+                let dsbData = null, fipData = null, tpbData = null;
+                try { dsbData = JSON.parse(localStorage.getItem('experiment_data_dsb') || 'null'); } catch (e) { }
+                try { fipData = JSON.parse(localStorage.getItem('experiment_data_fip') || 'null'); } catch (e) { }
+                try { tpbData = JSON.parse(localStorage.getItem('experiment_data_tpb') || 'null'); } catch (e) { }
+
+                const payload = {
+                    experimentId: "ALL",
+                    subjectId: subjectId,
+                    timestamp: new Date().toLocaleString() + ' ' + Intl.DateTimeFormat().resolvedOptions().timeZone,
+                    dsb: dsbData ? JSON.stringify(dsbData) : null,
+                    fip: fipData ? JSON.stringify(fipData) : null,
+                    tpb: tpbData ? JSON.stringify(tpbData) : null
+                };
+
+                fetch(WEBHOOK_URL, {
+                    method: "POST",
+                    mode: "no-cors",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify(payload)
+                }).then(() => {
+                    // Mark as fully submitted so next visit resets
+                    localStorage.setItem('all_submitted', 'true');
+
+                    if (banner) {
+                        banner.innerHTML = '✅ All tasks complete! Redirecting to Prolific in <span id="prolificCountdown">3</span>s…<br><br><a href="https://app.prolific.com/submissions/complete?cc=CMRMYHFS" style="color:#065F46;">Click here if not redirected automatically</a>';
                     }
-                }, 1000);
+                    let sec = 3;
+                    const countdownEl = document.getElementById('prolificCountdown');
+                    const timer = setInterval(() => {
+                        sec--;
+                        if (countdownEl) countdownEl.textContent = sec;
+                        if (sec <= 0) {
+                            clearInterval(timer);
+                            window.location.href = 'https://app.prolific.com/submissions/complete?cc=CMRMYHFS';
+                        }
+                    }, 1000);
+                }).catch((err) => {
+                    console.error('Unified submission failed:', err);
+                    if (banner) {
+                        banner.innerHTML = '⚠️ Data submission failed. Please <a href="https://app.prolific.com/submissions/complete?cc=CMRMYHFS" style="color:#065F46;">click here</a> to finish.';
+                        banner.style.background = '#FEF2F2';
+                        banner.style.borderColor = '#EF4444';
+                        banner.style.color = '#991B1B';
+                    }
+                    // Still mark as submitted to prevent re-run
+                    localStorage.setItem('all_submitted', 'true');
+                });
             } else if (firstIncomplete) {
                 // Auto-redirect to first incomplete experiment after 10 seconds
                 const autoMsg = document.getElementById('autoRedirectMsg');

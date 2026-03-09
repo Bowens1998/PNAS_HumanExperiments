@@ -665,27 +665,20 @@
           const saveStatus = document.getElementById('saveStatus');
           if (completeModal) completeModal.classList.add('active');
 
-          // Auto-submit to Webhook
+          // Save data to localStorage (unified submission happens on main menu)
           try {
-            const payload = {
-              experimentId: "DSB",
-              timestamp: new Date().toLocaleString() + ' ' + Intl.DateTimeFormat().resolvedOptions().timeZone,
-              data: JSON.stringify(runLog)
-            };
-            await fetch(WEBHOOK_URL, {
-              method: "POST",
-              mode: "no-cors",
-              headers: { "Content-Type": "text/plain;charset=utf-8" },
-              body: JSON.stringify(payload)
-            });
+            // Add subject ID to the run log
+            runLog.subjectId = window.SUBJECT_ID || 'unknown';
+            localStorage.setItem('experiment_data_dsb', JSON.stringify(runLog));
+            // Mark DSB as complete for main menu indicator
+            localStorage.setItem('task_complete_dsb', 'true');
+
             if (saveStatus) saveStatus.innerText = "Data saved successfully!";
             if (saveStatus) saveStatus.style.color = "var(--success)";
             const waitMsg = document.getElementById('waitMsg');
             if (waitMsg) waitMsg.style.display = 'none';
             const returnBtn = document.getElementById('returnBtn');
             if (returnBtn) returnBtn.setAttribute('style', 'text-decoration:none; display:inline-block !important; margin-top:16px;');
-            // Mark DSB as complete for main menu indicator
-            localStorage.setItem('task_complete_dsb', 'true');
             // Auto-return to main menu after 5 seconds
             let countdown = 5;
             const countdownEl = document.getElementById('autoReturnMsg');
@@ -969,8 +962,8 @@
     document.body.appendChild(a); a.click(); a.remove();
   };
 
-  // Auto-submission is handled directly in proceed() function now.
-  const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbzyZHP0KBEsq0hnyFrE8sWIVuZFFHIbhvngklXmiAojQa_y6ZYbiL9bjZQmGJXV2yXK/exec";
+  // Auto-submission removed — data is saved to localStorage and submitted from main menu.
+  // const WEBHOOK_URL = (removed — unified submission from index.html);
 
   // Removed API Configuration UI
 
