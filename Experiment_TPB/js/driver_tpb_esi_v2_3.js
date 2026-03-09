@@ -9,6 +9,46 @@
   function addClass(el, c) { el.classList.add(c); }
   function rmClass(el, c) { el.classList.remove(c); }
 
+  // --- Custom Modals ---
+  function showCustomAlert(title, message, btnText, callback, autoCloseSec = 0) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.8);z-index:99999;display:flex;align-items:center;justify-content:center;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:white;padding:30px;border-radius:12px;max-width:450px;text-align:center;font-family:system-ui, sans-serif;box-shadow:0 10px 25px rgba(0,0,0,0.5);';
+    box.innerHTML = `<h2 style="margin-top:0;color:#d32f2f;">${title}</h2>
+      <p style="font-size:16px;line-height:1.5;margin-bottom:24px;color:#333;white-space:pre-wrap;">${message}</p>
+      <button id="custom_alert_btn" style="background:#1976d2;color:white;border:none;padding:12px 24px;font-size:16px;border-radius:6px;cursor:pointer;font-weight:bold;width:100%;">${btnText}</button>`;
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    const btn = document.getElementById('custom_alert_btn');
+    let timer = null;
+    let timeRemaining = autoCloseSec;
+
+    const clickHandler = () => {
+      if (timer) clearInterval(timer);
+      if (document.body.contains(overlay)) {
+        document.body.removeChild(overlay);
+      }
+      if (callback) callback();
+    };
+
+    btn.addEventListener('click', clickHandler);
+
+    if (autoCloseSec > 0) {
+      const originalText = btnText.replace(/\s*\(\d+s\)/, '');
+      btn.innerText = `${originalText} (${timeRemaining}s)`;
+      timer = setInterval(() => {
+        timeRemaining--;
+        if (timeRemaining <= 0) {
+          clickHandler();
+        } else {
+          btn.innerText = `${originalText} (${timeRemaining}s)`;
+        }
+      }, 1000);
+    }
+  }
+
   // Setup webhook url and cheat code listener
   // WEBHOOK_URL removed — data is saved to localStorage and submitted from main menu.
   const secretCode = "whosyourdaddy";
@@ -344,18 +384,18 @@
 
     tpbWallclockTimer = setInterval(() => {
       const elapsed = Math.floor((Date.now() - tpbTrialStart) / 1000);
-      const wRemaining = Math.max(0, 60 - elapsed);
+      const wRemaining = Math.max(0, 90 - elapsed);
       R('status').innerText = `Trial — ⏱ ${wRemaining}s  |  idle ${tpbIdleLeft}s`;
       if (wRemaining <= 0) autoFinalizeTpbTrial('timeout_wallclock');
     }, 1000);
 
-    tpbIdleTimer = setTimeout(() => autoFinalizeTpbTrial('timeout_idle'), 20 * 1000);
+    tpbIdleTimer = setTimeout(() => autoFinalizeTpbTrial('timeout_idle'), 30 * 1000);
     tpbIdleCountdown = setInterval(() => { tpbIdleLeft = Math.max(0, tpbIdleLeft - 1); }, 1000);
   }
 
   // ── TPB timeout helper variables & functions ──
   let tpbWallclockTimer = null, tpbIdleTimer = null, tpbIdleCountdown = null;
-  let tpbTrialStart = 0, tpbIdleLeft = 20;
+  let tpbTrialStart = 0, tpbIdleLeft = 30;
 
   function clearTpbTimers() {
     if (tpbWallclockTimer) { clearInterval(tpbWallclockTimer); tpbWallclockTimer = null; }
@@ -366,14 +406,69 @@
   function resetTpbIdleTimer() {
     if (tpbIdleTimer) clearTimeout(tpbIdleTimer);
     if (tpbIdleCountdown) clearInterval(tpbIdleCountdown);
-    tpbIdleLeft = 20;
-    tpbIdleTimer = setTimeout(() => autoFinalizeTpbTrial('timeout_idle'), 20 * 1000);
+    tpbIdleLeft = 30;
+    tpbIdleTimer = setTimeout(() => autoFinalizeTpbTrial('timeout_idle'), 30 * 1000);
     tpbIdleCountdown = setInterval(() => { tpbIdleLeft = Math.max(0, tpbIdleLeft - 1); }, 1000);
   }
+
+  // Global idle resets (mousemove/scroll)
+  let lastGlobalTpbReset = Date.now();
+  const globalTpbIdleReset = () => {
+    if (tpbWallclockTimer && Date.now() - lastGlobalTpbReset > 1000) {
+      lastGlobalTpbReset = Date.now();
+      resetTpbIdleTimer();
+    }
+  };
+  document.addEventListener('mousemove', globalTpbIdleReset);
+  document.addEventListener('scroll', globalTpbIdleReset);
 
   function autoFinalizeTpbTrial(reason) {
     clearTpbTimers();
     if (done) return;
+
+    if (reason === 'timeout_wallclock') {
+      showCustomAlert(
+        "Time Limit Reached",
+        "You did not complete the trial within the 90-second limit.\n\nYour previous trial's data was not recorded. We will refresh the page to start a new session.",
+        "Refresh",
+        () => {
+          window.location.href = window.location.href.split('#')[0];
+        },
+        5
+      );
+      return;
+    }
+
+    if (reason === 'timeout_idle') {
+      let strikes = parseInt(sessionStorage.getItem('tpb_idle_strikes') || '0', 10);
+      strikes++;
+      sessionStorage.setItem('tpb_idle_strikes', strikes.toString());
+
+      if (strikes === 1) {
+        showCustomAlert(
+          "Idle Warning",
+          "Doing nothing for 30 seconds will terminate the task.\n\nYour previous trial's data was not recorded. We will refresh the page to start a new session.",
+          "Refresh",
+          () => {
+            window.location.href = window.location.href.split('#')[0];
+          },
+          5
+        );
+        return;
+      } else {
+        showCustomAlert(
+          "Idle Warning",
+          "Please stay active.\n\nThis session will not be recorded. We will refresh the page to start a new session.",
+          "Refresh",
+          () => {
+            window.location.href = window.location.href.split('#')[0];
+          },
+          5
+        );
+        return;
+      }
+    }
+
     // Force unlock all stages
     ctxSlider.disabled = false;
     btn.final.disabled = false;

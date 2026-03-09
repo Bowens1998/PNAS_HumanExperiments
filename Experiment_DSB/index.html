@@ -360,10 +360,79 @@
       text-align: right;
       font-family: monospace;
     }
+
+    /* Instruction Side-Panel */
+    .instruction-panel {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 300px;
+      height: 100vh;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      box-shadow: -4px 0 15px rgba(0, 0, 0, 0.05);
+      padding: 24px;
+      z-index: 40;
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      overflow-y: auto;
+    }
+
+    .instruction-panel.hidden {
+      transform: translateX(100%);
+    }
+
+    .instruction-panel h3 {
+      margin-top: 0;
+      color: var(--text-main);
+      font-size: 18px;
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 8px;
+      margin-bottom: 16px;
+    }
+
+    .instruction-panel ol {
+      padding-left: 20px;
+      color: var(--text-main);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .instruction-panel li {
+      margin-bottom: 12px;
+    }
+
+    .instruction-panel .f1-hint {
+      display: inline-block;
+      margin-top: 24px;
+      font-size: 13px;
+      color: var(--text-muted);
+      background: var(--background);
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
   </style>
 </head>
 
 <body>
+  <!-- Instruction Side-Panel -->
+  <div id="instructionPanel" class="instruction-panel">
+    <h3>Task Instructions</h3>
+    <ol>
+      <li><strong>Navigate the Drone:</strong> Use your keyboard's <strong>Arrow Keys</strong> (↑, ↓, ←, →) to move the
+        orange drone.</li>
+      <li><strong>Avoid Walls:</strong> Do not crash into the dark grey walls, as this will deplete your battery.</li>
+      <li><strong>Reach the Goal:</strong> Guide the drone to the green goal square before time runs out.</li>
+      <li><strong>Survey:</strong> Once you reach the goal, a survey modal will appear. Rate your belief about the
+        current flight conditions.</li>
+      <li><strong>Confirm:</strong> Click the "Confirm Rating" button in the survey to submit your data and proceed to
+        the next trial.</li>
+    </ol>
+    <div class="f1-hint">
+      💡 Press <strong>F1</strong> anytime to hide or show this panel.
+    </div>
+  </div>
+
   <header>
     <h1>Drone Navigation Task</h1>
     <a href="../index.html" style="text-decoration:none;">
@@ -472,10 +541,13 @@
           <div style="flex:1; display:flex; flex-direction:column; justify-content:center;">
             <input type="range" id="beliefSlider" min="0" max="100" value="50" style="margin-bottom: 24px;">
             <div class="survey-labels"
-              style="display:flex; justify-content:space-between; font-size:16px; color:var(--text-muted);">
+              style="display:flex; justify-content:space-between; font-size:16px; color:var(--text-muted); margin-bottom: 32px;">
               <span>0% (Safe)</span>
               <span style="font-weight:bold; color:var(--primary); font-size:24px;" id="beliefVal">50</span>
               <span>100% (Turbulent/Risky)</span>
+            </div>
+            <div id="surveyTimerDisplay"
+              style="text-align:center; color:var(--danger); font-weight:bold; font-size:18px;">Time remaining: 10s
             </div>
           </div>
           <div style="text-align:right; margin-top:32px;">
@@ -510,6 +582,17 @@
   <script src="../assets/tour.js?v=2.0"></script>
   <script src="./js/config.js"></script>
   <script src="./js/driver_layers_v6.js?v=10.0"></script>
+  <script>
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'F1') {
+        e.preventDefault();
+        const panel = document.getElementById('instructionPanel');
+        if (panel) {
+          panel.classList.toggle('hidden');
+        }
+      }
+    });
+  </script>
   <script>
     // Initialize Tour
     document.addEventListener("DOMContentLoaded", () => {

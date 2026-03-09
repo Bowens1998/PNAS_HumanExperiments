@@ -372,10 +372,79 @@
       line-height: 1.6;
       margin-bottom: 24px;
     }
+
+    /* Instruction Side-Panel */
+    .instruction-panel {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 300px;
+      height: 100vh;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      box-shadow: -4px 0 15px rgba(0, 0, 0, 0.05);
+      padding: 24px;
+      z-index: 40;
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      overflow-y: auto;
+    }
+
+    .instruction-panel.hidden {
+      transform: translateX(100%);
+    }
+
+    .instruction-panel h3 {
+      margin-top: 0;
+      color: var(--text-main);
+      font-size: 18px;
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 8px;
+      margin-bottom: 16px;
+    }
+
+    .instruction-panel ol {
+      padding-left: 20px;
+      color: var(--text-main);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .instruction-panel li {
+      margin-bottom: 12px;
+    }
+
+    .instruction-panel .f1-hint {
+      display: inline-block;
+      margin-top: 24px;
+      font-size: 13px;
+      color: var(--text-muted);
+      background: var(--background);
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
   </style>
 </head>
 
 <body>
+  <!-- Instruction Side-Panel -->
+  <div id="instructionPanel" class="instruction-panel">
+    <h3>Task Instructions</h3>
+    <ol>
+      <li><strong>Review Patient:</strong> Read the Profile, Vitals, and History of the patient as they emerge.</li>
+      <li><strong>Advance Time:</strong> Click "Next Tick" (or press Spacebar) to reveal more information. Use this
+        carefully to balance speed vs. certainty.</li>
+      <li><strong>Finalize:</strong> Once you have enough information, click "Finalize Triage" (or press 'F').</li>
+      <li><strong>Assign ESI & Context:</strong> In the popup modal, assign the correct Emergency Severity Index (Level
+        1-5). Don't forget to slide the "Contextual Belief" slider below to indicate your perception of case severity.
+      </li>
+      <li><strong>Confirm:</strong> Click "Confirm ESI" to submit your data and start the next trial.</li>
+    </ol>
+    <div class="f1-hint">
+      💡 Press <strong>F1</strong> anytime to hide or show this panel.
+    </div>
+  </div>
+
   <header>
     <div style="display:flex; align-items:center; gap:16px;">
       <span class="title">Emergency Triage Task</span>
@@ -703,7 +772,7 @@
                 if (autoClickTimer) clearTimeout(autoClickTimer);
                 autoClickTimer = setTimeout(() => {
                   if (!nextCardBtn.disabled) nextCardBtn.click();
-                }, 5000);
+                }, 10000);
               };
 
               const lockNextFor3Seconds = () => {
@@ -722,7 +791,7 @@
                     nextCardBtn.style.opacity = '1';
                     nextCardBtn.style.cursor = 'pointer';
                     nextCardBtn.innerText = currentCardIdx === cards.length - 1 ? 'Finish Examples' : 'Next Example ➔';
-                    startAutoClickCountdown(); // 5s auto-click after lock expires
+                    startAutoClickCountdown(); // 10s auto-click after lock expires
                   } else {
                     nextCardBtn.innerText = `Reading time... (${timeLeft}s)`;
                   }
@@ -759,8 +828,8 @@
                     nextBtn.style.opacity = '1';
                     nextBtn.style.cursor = 'pointer';
                     nextBtn.innerText = 'Next Step';
-                    // Auto-click Next Step after 5s
-                    setTimeout(() => { if (nextBtn) nextBtn.click(); }, 5000);
+                    // Auto-click Next Step after 10s
+                    setTimeout(() => { if (nextBtn) nextBtn.click(); }, 10000);
                   }
                 }
               });
@@ -781,7 +850,7 @@
                     nextCardBtn.style.opacity = '1';
                     nextCardBtn.style.cursor = 'pointer';
                     nextCardBtn.innerText = 'Next Example ➔';
-                    startAutoClickCountdown(); // Restart 5s auto-click
+                    startAutoClickCountdown(); // Restart 10s auto-click
                   }
                 });
               }
@@ -898,7 +967,7 @@
         sessionStorage.setItem('tpb_tour_seen', 'true');
         // Reload page to reset states
         window.location.reload();
-      }, { autoAdvanceSec: 5 });
+      }, { autoAdvanceSec: 10 });
 
       // Show tour on first visit; after tour completes and reloads, auto-start experiment
       if (!sessionStorage.getItem('tpb_tour_seen')) {
@@ -915,6 +984,16 @@
     });
     document.getElementById('cancelESI').addEventListener('click', () => {
       document.getElementById('modalBg').classList.remove('active');
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'F1') {
+        e.preventDefault();
+        const panel = document.getElementById('instructionPanel');
+        if (panel) {
+          panel.classList.toggle('hidden');
+        }
+      }
     });
   </script>
 </body>

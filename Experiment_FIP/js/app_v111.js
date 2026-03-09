@@ -53,6 +53,46 @@ document.addEventListener('DOMContentLoaded', () => {
     console.error(msg);
   }
 
+  // --- Custom Modals ---
+  function showCustomAlert(title, message, btnText, callback, autoCloseSec = 0) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.8);z-index:99999;display:flex;align-items:center;justify-content:center;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:white;padding:30px;border-radius:12px;max-width:450px;text-align:center;font-family:system-ui, sans-serif;box-shadow:0 10px 25px rgba(0,0,0,0.5);';
+    box.innerHTML = `<h2 style="margin-top:0;color:#d32f2f;">${title}</h2>
+      <p style="font-size:16px;line-height:1.5;margin-bottom:24px;color:#333;white-space:pre-wrap;">${message}</p>
+      <button id="custom_alert_btn" style="background:#1976d2;color:white;border:none;padding:12px 24px;font-size:16px;border-radius:6px;cursor:pointer;font-weight:bold;width:100%;">${btnText}</button>`;
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    const btn = document.getElementById('custom_alert_btn');
+    let timer = null;
+    let timeRemaining = autoCloseSec;
+
+    const clickHandler = () => {
+      if (timer) clearInterval(timer);
+      if (document.body.contains(overlay)) {
+        document.body.removeChild(overlay);
+      }
+      if (callback) callback();
+    };
+
+    btn.addEventListener('click', clickHandler);
+
+    if (autoCloseSec > 0) {
+      const originalText = btnText.replace(/\s*\(\d+s\)/, '');
+      btn.innerText = `${originalText} (${timeRemaining}s)`;
+      timer = setInterval(() => {
+        timeRemaining--;
+        if (timeRemaining <= 0) {
+          clickHandler();
+        } else {
+          btn.innerText = `${originalText} (${timeRemaining}s)`;
+        }
+      }, 1000);
+    }
+  }
+
   // Math helpers (Global access needed for HeadlessExperiment)
   function matmul(A, B) {
     const n = A.length, m = B[0].length, p = B.length;
@@ -372,13 +412,16 @@ document.addEventListener('DOMContentLoaded', () => {
       nextTrial._stageAbort = new AbortController();
       const stageSignal = nextTrial._stageAbort.signal;
 
-      // --- Stage A gate: ALL 3 charts must have trend selected AND confidence adjusted ---
-      const stageADone = {
-        L: { trend: false, conf: false },
-        M: { trend: false, conf: false },
-        H: { trend: false, conf: false }
-      };
+      // --- Stage A gate: ALL 3 charts must have trend selected
+      // Initialize state for Stage Gating
+      const stageADone = { L: { trend: false, conf: false }, M: { trend: false, conf: false }, H: { trend: false, conf: false } };
 
+      // Uncheck all trend radios
+      ['L', 'M', 'H'].forEach(k => {
+        document.querySelectorAll(`input[name="trend${k}"]`).forEach(r => r.checked = false);
+      });
+
+      ctxRisk.disabled = true;
       function checkStageAComplete() {
         return ['L', 'M', 'H'].every(k => stageADone[k].trend && stageADone[k].conf);
       }
@@ -451,18 +494,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
       fipWallclockTimer = setInterval(() => {
         const elapsed = Math.floor((Date.now() - fipTrialStart) / 1000);
-        const wRemaining = Math.max(0, 60 - elapsed);
+        const wRemaining = Math.max(0, 90 - elapsed);
         status.textContent = `Trial ${trialIdx + 1} / ${RUN.T_trials}  |  ⏱ ${wRemaining}s  |  idle ${fipIdleLeft}s`;
         if (wRemaining <= 0) autoSubmitFipTrial('timeout_wallclock');
       }, 1000);
 
-      fipIdleTimer = setTimeout(() => autoSubmitFipTrial('timeout_idle'), 20 * 1000);
+      fipIdleTimer = setTimeout(() => autoSubmitFipTrial('timeout_idle'), 30 * 1000);
       fipIdleCountdown = setInterval(() => { fipIdleLeft = Math.max(0, fipIdleLeft - 1); }, 1000);
     }
 
     // ── FIP timeout helper variables & functions ──
     let fipWallclockTimer = null, fipIdleTimer = null, fipIdleCountdown = null;
-    let fipTrialStart = 0, fipIdleLeft = 20;
+    let fipTrialStart = 0, fipIdleLeft = 30;
 
     function clearFipTimers() {
       if (fipWallclockTimer) { clearInterval(fipWallclockTimer); fipWallclockTimer = null; }
@@ -473,13 +516,68 @@ document.addEventListener('DOMContentLoaded', () => {
     function resetFipIdleTimer() {
       if (fipIdleTimer) clearTimeout(fipIdleTimer);
       if (fipIdleCountdown) clearInterval(fipIdleCountdown);
-      fipIdleLeft = 20;
-      fipIdleTimer = setTimeout(() => autoSubmitFipTrial('timeout_idle'), 20 * 1000);
+      fipIdleLeft = 30;
+      fipIdleTimer = setTimeout(() => autoSubmitFipTrial('timeout_idle'), 30 * 1000);
       fipIdleCountdown = setInterval(() => { fipIdleLeft = Math.max(0, fipIdleLeft - 1); }, 1000);
     }
 
+    // Global idle resets (mousemove/scroll)
+    let lastGlobalFipReset = Date.now();
+    const globalFipIdleReset = () => {
+      if (fipWallclockTimer && Date.now() - lastGlobalFipReset > 1000) {
+        lastGlobalFipReset = Date.now();
+        resetFipIdleTimer();
+      }
+    };
+    document.addEventListener('mousemove', globalFipIdleReset);
+    document.addEventListener('scroll', globalFipIdleReset);
+
     function autoSubmitFipTrial(reason) {
       clearFipTimers();
+
+      if (reason === 'timeout_wallclock') {
+        showCustomAlert(
+          "Time Limit Reached",
+          "You did not complete the trial within the 90-second limit.\n\nYour previous trial's data was not recorded. We will refresh the page to start a new session.",
+          "Refresh",
+          () => {
+            window.location.href = window.location.href.split('#')[0];
+          },
+          5
+        );
+        return;
+      }
+
+      if (reason === 'timeout_idle') {
+        let strikes = parseInt(sessionStorage.getItem('fip_idle_strikes') || '0', 10);
+        strikes++;
+        sessionStorage.setItem('fip_idle_strikes', strikes.toString());
+
+        if (strikes === 1) {
+          showCustomAlert(
+            "Idle Warning",
+            "Doing nothing for 30 seconds will terminate the task.\n\nYour previous trial's data was not recorded. We will refresh the page to start a new session.",
+            "Refresh",
+            () => {
+              window.location.href = window.location.href.split('#')[0];
+            },
+            5
+          );
+          return;
+        } else {
+          showCustomAlert(
+            "Idle Warning",
+            "Please stay active.\n\nThis session will not be recorded. We will refresh the page to start a new session.",
+            "Refresh",
+            () => {
+              window.location.href = window.location.href.split('#')[0];
+            },
+            5
+          );
+          return;
+        }
+      }
+
       // Force unlock all stages
       ctxRisk.disabled = false;
       wL.disabled = false; wM.disabled = false; wH.disabled = false;

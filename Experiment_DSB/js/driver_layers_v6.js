@@ -3,6 +3,46 @@
   const defaults = window.APP_CONFIG;
   let config = JSON.parse(JSON.stringify(defaults)); // shallow clone for mutation by UI
 
+  // --- Custom Modals ---
+  function showCustomAlert(title, message, btnText, callback, autoCloseSec = 0) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.8);z-index:99999;display:flex;align-items:center;justify-content:center;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:white;padding:30px;border-radius:12px;max-width:450px;text-align:center;font-family:system-ui, sans-serif;box-shadow:0 10px 25px rgba(0,0,0,0.5);';
+    box.innerHTML = `<h2 style="margin-top:0;color:#d32f2f;">${title}</h2>
+      <p style="font-size:16px;line-height:1.5;margin-bottom:24px;color:#333;white-space:pre-wrap;">${message}</p>
+      <button id="custom_alert_btn" style="background:#1976d2;color:white;border:none;padding:12px 24px;font-size:16px;border-radius:6px;cursor:pointer;font-weight:bold;width:100%;">${btnText}</button>`;
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    const btn = document.getElementById('custom_alert_btn');
+    let timer = null;
+    let timeRemaining = autoCloseSec;
+
+    const clickHandler = () => {
+      if (timer) clearInterval(timer);
+      if (document.body.contains(overlay)) {
+        document.body.removeChild(overlay);
+      }
+      if (callback) callback();
+    };
+
+    btn.addEventListener('click', clickHandler);
+
+    if (autoCloseSec > 0) {
+      const originalText = btnText.replace(/\s*\(\d+s\)/, '');
+      btn.innerText = `${originalText} (${timeRemaining}s)`;
+      timer = setInterval(() => {
+        timeRemaining--;
+        if (timeRemaining <= 0) {
+          clickHandler();
+        } else {
+          btn.innerText = `${originalText} (${timeRemaining}s)`;
+        }
+      }, 1000);
+    }
+  }
+
   // Cheat code logic
   let keysPressed = "";
   const secretCode = "whosyourdaddy";
@@ -378,7 +418,6 @@
         beliefSliderRef.addEventListener('input', () => {
           if (beliefVal) beliefVal.innerText = beliefSliderRef.value;
           if (okSurvey) okSurvey.disabled = false;
-          resetSurveyIdleTimer(); // Reset idle on slider interaction
         }, { signal: beliefSliderAbortController.signal });
       }
 
@@ -387,33 +426,35 @@
         surveyModal.classList.remove('active'); // Changed to use classList
       };
 
-      // ── Survey timeout: auto-submit with default value ──
-      const sCfg = defaults.timeout || {};
-      const sWallclockSec = sCfg.survey_wallclock_sec || 10;
-      const sIdleSec = sCfg.survey_idle_sec || 10;
+      // ── Survey timeout: auto-submit with current value ──
+      const sWallclockSec = 10;
       let sWallclockTimer = null;
-      let sIdleTimer = null;
+      let timeRemaining = sWallclockSec;
+
+      const timerDisplay = document.getElementById('surveyTimerDisplay');
+      if (timerDisplay) {
+        timerDisplay.style.visibility = 'visible';
+        timerDisplay.innerText = `Time remaining: ${timeRemaining}s`;
+      }
 
       function clearSurveyTimers() {
-        if (sWallclockTimer) { clearTimeout(sWallclockTimer); sWallclockTimer = null; }
-        if (sIdleTimer) { clearTimeout(sIdleTimer); sIdleTimer = null; }
+        if (sWallclockTimer) { clearInterval(sWallclockTimer); sWallclockTimer = null; }
       }
 
       function autoSubmitSurvey() {
         clearSurveyTimers();
         const val = Number(beliefSliderRef ? beliefSliderRef.value : 50);
-        const result = { context_belief: val, auto_submitted: true };
+        const result = { context_belief: val, auto_submitted: (timeRemaining <= 0) };
         cleanup(); resolve(result);
       }
 
-      function resetSurveyIdleTimer() {
-        if (sIdleTimer) clearTimeout(sIdleTimer);
-        sIdleTimer = setTimeout(autoSubmitSurvey, sIdleSec * 1000);
-      }
-
-      // Start survey timers
-      sWallclockTimer = setTimeout(autoSubmitSurvey, sWallclockSec * 1000);
-      resetSurveyIdleTimer();
+      sWallclockTimer = setInterval(() => {
+        timeRemaining--;
+        if (timerDisplay) timerDisplay.innerText = `Time remaining: ${timeRemaining}s`;
+        if (timeRemaining <= 0) {
+          autoSubmitSurvey();
+        }
+      }, 1000);
 
       okSurvey.onclick = () => {
         const val = Number(beliefSliderRef ? beliefSliderRef.value : 50);
@@ -527,6 +568,17 @@
     };
     document.addEventListener('keydown', onKey, { signal: trialAbortController.signal });
 
+    // Global idle resets (mousemove/scroll)
+    let lastGlobalIdleReset = Date.now();
+    const globalIdleReset = () => {
+      if (Date.now() - lastGlobalIdleReset > 1000) {
+        lastGlobalIdleReset = Date.now();
+        resetIdleTimer();
+      }
+    };
+    document.addEventListener('mousemove', globalIdleReset, { signal: trialAbortController.signal });
+    document.addEventListener('scroll', globalIdleReset, { signal: trialAbortController.signal });
+
     function applyDrain(collided) {
       let d = config.battery.drain_per_step + (collided ? config.battery.drain_collision_penalty : 0);
       if (factors.urgency === 'on') d += (config.battery.urgency_extra || 0);
@@ -639,6 +691,50 @@
       awaiting = false;
       clearAllTimers(); // Clean up all timeout/idle timers
       trialAbortController.abort(); // Destroy the keydown listener
+
+      if (why === 'timeout_wallclock') {
+        showCustomAlert(
+          "Time Limit Reached",
+          "You did not complete the trial within the 90-second limit.\n\nYour previous trial's data was not recorded. We will refresh the page to start a new session.",
+          "Refresh",
+          () => {
+            window.location.href = window.location.href.split('#')[0];
+          },
+          5
+        );
+        return;
+      }
+
+      if (why === 'timeout_idle') {
+        let strikes = parseInt(sessionStorage.getItem('dsb_idle_strikes') || '0', 10);
+        strikes++;
+        sessionStorage.setItem('dsb_idle_strikes', strikes.toString());
+
+        if (strikes === 1) {
+          showCustomAlert(
+            "Idle Warning",
+            "Doing nothing for 30 seconds will terminate the task.\n\nYour previous trial's data was not recorded. We will refresh the page to start a new session.",
+            "Refresh",
+            () => {
+              window.location.href = window.location.href.split('#')[0];
+            },
+            5
+          );
+          return;
+        } else {
+          showCustomAlert(
+            "Idle Warning",
+            "Please stay active.\n\nThis session will not be recorded. We will refresh the page to start a new session.",
+            "Refresh",
+            () => {
+              window.location.href = window.location.href.split('#')[0];
+            },
+            5
+          );
+          return;
+        }
+      }
+
       trialLog.end_reason = why;
       trialLog.elapsed_sec = parseFloat(((Date.now() - trialStartTime) / 1000).toFixed(1));
       runLog.trials.push(trialLog);

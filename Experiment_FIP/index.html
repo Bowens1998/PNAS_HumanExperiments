@@ -350,10 +350,82 @@
     .modal-card li {
       margin-bottom: 8px;
     }
+
+    /* Instruction Side-Panel */
+    .instruction-panel {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 300px;
+      height: 100vh;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      box-shadow: -4px 0 15px rgba(0, 0, 0, 0.05);
+      padding: 24px;
+      z-index: 40;
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      overflow-y: auto;
+    }
+
+    .instruction-panel.hidden {
+      transform: translateX(100%);
+    }
+
+    .instruction-panel h3 {
+      margin-top: 0;
+      color: var(--text-main);
+      font-size: 18px;
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 8px;
+      margin-bottom: 16px;
+    }
+
+    .instruction-panel ol {
+      padding-left: 20px;
+      color: var(--text-main);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .instruction-panel li {
+      margin-bottom: 12px;
+    }
+
+    .instruction-panel .f1-hint {
+      display: inline-block;
+      margin-top: 24px;
+      font-size: 13px;
+      color: var(--text-muted);
+      background: var(--background);
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
   </style>
 </head>
 
 <body>
+  <!-- Instruction Side-Panel -->
+  <div id="instructionPanel" class="instruction-panel">
+    <h3>Task Instructions</h3>
+    <ol>
+      <li><strong>Select Trends:</strong> Look at the graphs for Index A, Index B, and Index C. Select whether you think
+        the trend is <strong>Up</strong>, <strong>Flat</strong>, or <strong>Down</strong>, and set your
+        <strong>Confidence</strong> level.
+      </li>
+      <li><strong>Overall Risk:</strong> Estimate the overall risk and turbulence in the market using the
+        <strong>Contextual Belief</strong> slider.
+      </li>
+      <li><strong>Allocate Assets:</strong> Adjust your allocations to Low, Medium, and High-Risk assets. They must sum
+        to 100%.</li>
+      <li><strong>Submit:</strong> Click the "Finalize Trial" button to lock in your choices and proceed to the next
+        trial.</li>
+    </ol>
+    <div class="f1-hint">
+      💡 Press <strong>F1</strong> anytime to hide or show this panel.
+    </div>
+  </div>
+
   <header>
     <h1>Financial Investment Task</h1>
     <a href="../index.html" style="text-decoration:none;">
@@ -425,7 +497,7 @@
             <div class="axis-label">Δ% vs. time (steps)</div>
             <div class="radio-row">
               <label><input type="radio" name="trendL" value="up"> Up</label>
-              <label><input type="radio" name="trendL" value="flat" checked> Flat</label>
+              <label><input type="radio" name="trendL" value="flat"> Flat</label>
               <label><input type="radio" name="trendL" value="down"> Down</label>
             </div>
             <div style="font-size:13px; font-weight:500;">Confidence <input id="confL" type="range" min="0" max="100"
@@ -442,7 +514,7 @@
             <div class="axis-label">Δ% vs. time (steps)</div>
             <div class="radio-row">
               <label><input type="radio" name="trendM" value="up"> Up</label>
-              <label><input type="radio" name="trendM" value="flat" checked> Flat</label>
+              <label><input type="radio" name="trendM" value="flat"> Flat</label>
               <label><input type="radio" name="trendM" value="down"> Down</label>
             </div>
             <div style="font-size:13px; font-weight:500;">Confidence <input id="confM" type="range" min="0" max="100"
@@ -458,7 +530,7 @@
             <div class="axis-label">Δ% vs. time (steps)</div>
             <div class="radio-row">
               <label><input type="radio" name="trendH" value="up"> Up</label>
-              <label><input type="radio" name="trendH" value="flat" checked> Flat</label>
+              <label><input type="radio" name="trendH" value="flat"> Flat</label>
               <label><input type="radio" name="trendH" value="down"> Down</label>
             </div>
             <div style="font-size:13px; font-weight:500;">Confidence <input id="confH" type="range" min="0" max="100"
@@ -627,7 +699,7 @@
         // Set flag BEFORE reload so the reloaded page knows to skip tour and auto-start
         sessionStorage.setItem('fip_tour_seen', 'true');
         window.location.reload();
-      }, { autoAdvanceSec: 5 });
+      }, { autoAdvanceSec: 10 });
 
       // Show tour on first visit; after tour completes and reloads, auto-start experiment
       if (!sessionStorage.getItem('fip_tour_seen')) {
@@ -640,6 +712,16 @@
           const btn = document.getElementById('startBtn');
           if (btn && !btn.disabled) btn.click();
         }, 500);
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'F1') {
+        e.preventDefault();
+        const panel = document.getElementById('instructionPanel');
+        if (panel) {
+          panel.classList.toggle('hidden');
+        }
       }
     });
   </script>
